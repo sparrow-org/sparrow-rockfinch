@@ -1,0 +1,15 @@
+name: sparrow-pycapsule
+channels:
+  - conda-forge
+dependencies:
+  # Build
+  - cmake
+  - ninja
+  # Dependencies
+  - sparrow
+  - python
+  # Tests
+  - doctest
+  # Documentation
+  - doxygen
+  - graphviz

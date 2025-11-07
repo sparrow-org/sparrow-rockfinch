@@ -1,0 +1,17 @@
+#pragma once
+
+namespace sparrow
+{
+    constexpr int SPARROW_PYCAPSULE_VERSION_MAJOR = 0;
+    constexpr int SPARROW_PYCAPSULE_VERSION_MINOR = 1;
+    constexpr int SPARROW_PYCAPSULE_VERSION_PATCH = 0;
+
+    constexpr int SPARROW_PYCAPSULE_BINARY_CURRENT = 1;
+    constexpr int SPARROW_PYCAPSULE_BINARY_REVISION = 0;
+    constexpr int SPARROW_PYCAPSULE_BINARY_AGE = 0;
+
+    static_assert(
+        SPARROW_PYCAPSULE_BINARY_AGE <= SPARROW_PYCAPSULE_BINARY_CURRENT,
+        "SPARROW_PYCAPSULE_BINARY_AGE cannot be greater than SPARROW_PYCAPSULE_BINARY_CURRENT"
+    );
+}
