@@ -405,7 +405,7 @@ namespace sparrow::pycapsule
             SUBCASE("destructor_handles_already_released_schema")
             {
                 // Create a schema with null release callback
-                ArrowSchema* schema = new ArrowSchema();
+                ArrowSchema* schema = new ArrowSchema{};
                 schema->release = nullptr;
 
                 PyObject* capsule = PyCapsule_New(schema, "arrow_schema", release_arrow_schema_pycapsule);
@@ -422,7 +422,7 @@ namespace sparrow::pycapsule
             SUBCASE("destructor_handles_already_released_array")
             {
                 // Create an array with null release callback
-                ArrowArray* array = new ArrowArray();
+                ArrowArray* array = new ArrowArray{};
                 array->release = nullptr;
 
                 PyObject* capsule = PyCapsule_New(array, "arrow_array", release_arrow_array_pycapsule);

@@ -131,7 +131,18 @@ namespace sparrow::pycapsule
         ArrowArray* array_ptr = new ArrowArray(std::move(arrow_array));
 
         PyObject* schema_capsule = PyCapsule_New(schema_ptr, arrow_schema_str.data(), release_arrow_schema_pycapsule);
+        if (!schema_capsule) {
+            delete schema_ptr;
+            delete array_ptr;
+            return {nullptr, nullptr};
+        }
         PyObject* array_capsule = PyCapsule_New(array_ptr, arrow_array_str.data(), release_arrow_array_pycapsule);
+        if (!array_capsule) {
+            delete schema_ptr;
+            delete array_ptr;
+            Py_DECREF(schema_capsule);
+            return {nullptr, nullptr};
+        }
 
         return {schema_capsule, array_capsule};
     }
