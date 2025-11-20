@@ -6,7 +6,7 @@ dependencies:
   - cmake
   - ninja
   # Dependencies
-  - sparrow
+  - sparrow-devel
   - python
   # Tests
   - doctest
