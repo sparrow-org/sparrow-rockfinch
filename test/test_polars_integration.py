@@ -312,15 +312,6 @@ def test_roundtrip(cpp_lib):
 
 
 if __name__ == "__main__":
-    """Run tests with pytest when executed directly."""
-    print("\n")
-    print("╔" + "=" * 68 + "╗")
-    print("║" + " " * 68 + "║")
-    print("║" + "Sparrow-PyCapsule ↔ Polars Integration Tests".center(68) + "║")
-    print("║" + "(Pointer-based approach - no PyCapsule_New in C++)".center(68) + "║")
-    print("║" + " " * 68 + "║")
-    print("╚" + "=" * 68 + "╝")
-    print("\nRunning tests with pytest...\n")
-    
+    """Run tests with pytest when executed directly."""  
     # Run pytest on this file
     sys.exit(pytest.main([__file__, "-v", "-s"]))
