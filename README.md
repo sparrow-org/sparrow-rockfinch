@@ -135,22 +135,12 @@ cd build
 Test bidirectional data exchange with Polars:
 
 ```bash
-# Run via CMake target (recommended)
-cd build
-cmake --build . --target run_polars_tests
 
 # Or with direct execution (better output)
 cmake --build . --target run_polars_tests_direct
 
-# Or via CTest
-ctest -R test_polars_integration --output-on-failure
-
 # Check dependencies first
 cmake --build . --target check_polars_deps
-
-# Or run Python script directly
-cd test
-python test_polars_integration.py
 ```
 
 See [test/README_POLARS_TESTS.md](test/README_POLARS_TESTS.md) for detailed documentation.
@@ -163,27 +153,18 @@ The project provides several convenient CMake targets for testing:
 |--------|-------------|
 | `run_tests` | Run all C++ unit tests |
 | `run_tests_with_junit_report` | Run C++ tests with JUnit XML output |
-| `run_polars_tests` | Run Polars integration test via CTest |
 | `run_polars_tests_direct` | Run Polars test directly (recommended, better output) |
 | `check_polars_deps` | Check Python dependencies (polars, pyarrow) |
-| `debug_polars_tests` | Run Polars tests with verbose debugging output |
-| `test_library_load` | Minimal test to debug library loading issues |
 
 **Usage:**
 ```bash
 cd build
-
-# Run C++ tests
-cmake --build . --target run_tests
 
 # Run Polars integration tests
 cmake --build . --target run_polars_tests_direct
 
 # Check dependencies first
 cmake --build . --target check_polars_deps
-
-# Or use CTest to run all tests
-ctest --output-on-failure
 ```
 
 ### Debugging Test Failures
@@ -195,9 +176,6 @@ cd build
 
 # Run minimal library loading test (step-by-step debugging)
 cmake --build . --target test_library_load
-
-# Run with full debugging output
-cmake --build . --target debug_polars_tests
 
 # Check that libraries exist and dependencies are correct
 cmake --build . --target check_polars_deps
