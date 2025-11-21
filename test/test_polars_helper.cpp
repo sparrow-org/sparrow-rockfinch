@@ -6,17 +6,19 @@
  * to test the bidirectional data exchange between Polars and sparrow.
  */
 
+#include "test_polars_helper.hpp"
+
 #include <cstdint>
 #include <iostream>
 #include <vector>
 
 #include <Python.h>
+#include <sparrow-pycapsule/config/config.hpp>
 #include <sparrow-pycapsule/pycapsule.hpp>
 
 #include <sparrow/array.hpp>
 #include <sparrow/primitive_array.hpp>
 #include <sparrow/utils/nullable.hpp>
-#include <sparrow-pycapsule/config/config.hpp>
 
 // Export C API functions for ctypes
 extern "C"
@@ -27,7 +29,7 @@ extern "C"
      * Note: When called from Python (via ctypes), Python is already initialized.
      * This function only initializes if called from pure C++ context.
      */
-    SPARROW_PYCAPSULE_API void init_python()
+    void init_python()
     {
         // When called from Python via ctypes, Python is already initialized
         // So this check should always be true, and we do nothing
@@ -51,7 +53,7 @@ extern "C"
      * @param array_ptr_out Output parameter for ArrowArray pointer
      * @return 0 on success, -1 on error
      */
-    SPARROW_PYCAPSULE_API int create_test_array_as_pointers(void** schema_ptr_out, void** array_ptr_out)
+    int create_test_array_as_pointers(void** schema_ptr_out, void** array_ptr_out)
     {
         try
         {
@@ -95,7 +97,7 @@ extern "C"
      * @param array_ptr_out Output ArrowArray pointer
      * @return 0 on success, -1 on error
      */
-    SPARROW_PYCAPSULE_API int
+    int
     roundtrip_array_pointers(void* schema_ptr_in, void* array_ptr_in, void** schema_ptr_out, void** array_ptr_out)
     {
         try
@@ -146,7 +148,7 @@ extern "C"
      * @param expected_size Expected array size
      * @return 0 if size matches, -1 otherwise
      */
-    SPARROW_PYCAPSULE_API int verify_array_size_from_pointers(void* schema_ptr, void* array_ptr, size_t expected_size)
+    int verify_array_size_from_pointers(void* schema_ptr, void* array_ptr, size_t expected_size)
     {
         try
         {

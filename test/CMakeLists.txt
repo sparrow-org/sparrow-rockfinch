@@ -87,7 +87,7 @@ set_target_properties(run_tests_with_junit_report PROPERTIES FOLDER "Tests utili
 
 # Polars integration test helper library
 # =======================================
-add_library(test_polars_helper SHARED test_polars_helper.cpp)
+add_library(test_polars_helper SHARED test_polars_helper.cpp test_polars_helper.hpp)
 
 target_link_libraries(test_polars_helper
     PUBLIC
