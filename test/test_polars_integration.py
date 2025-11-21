@@ -190,30 +190,30 @@ def test_create_array_in_cpp(cpp_lib):
     assert schema_ptr.value is not None, "Received null schema pointer from C++"
     assert array_ptr.value is not None, "Received null array pointer from C++"
     
-    print(f"   ✓ Array created (schema_ptr={hex(schema_ptr.value)}, array_ptr={hex(array_ptr.value)})")
+    print(f"   Array created (schema_ptr={hex(schema_ptr.value)}, array_ptr={hex(array_ptr.value)})")
     
     print("\n2. Converting C pointers to PyCapsules in Python...")
     schema_capsule, array_capsule = pointer_to_arrow_capsule(schema_ptr.value, array_ptr.value)
-    print("   ✓ PyCapsules created in Python")
+    print("   PyCapsules created in Python")
     
     print("\n3. Importing to PyArrow...")
     arrow_array = pa.Array._import_from_c_capsule(schema_capsule, array_capsule)
-    print(f"   ✓ Arrow type: {arrow_array.type}")
-    print(f"   ✓ Arrow values: {arrow_array.to_pylist()}")
+    print(f"   Arrow type: {arrow_array.type}")
+    print(f"   Arrow values: {arrow_array.to_pylist()}")
     
     # Convert to Polars
     print("\n4. Converting to Polars...")
     polars_series = pl.from_arrow(arrow_array)
-    print(f"   ✓ Polars series: {polars_series.to_list()}")
+    print(f"   Polars series: {polars_series.to_list()}")
     
     # Verify expected values
     expected = [10, 20, None, 40, 50]
     actual = polars_series.to_list()
     
     assert expected == actual, f"Data mismatch! Expected: {expected}, Actual: {actual}"
-    print("   ✓ Data matches expected values!")
+    print("   Data matches expected values!")
     print("\n" + "=" * 70)
-    print("✓ Test 1 PASSED")
+    print("Test 1 PASSED")
     print("=" * 70)
 
 
@@ -234,22 +234,22 @@ def test_polars_to_cpp(cpp_lib):
     print("\n2. Exporting to Arrow C Data Interface...")
     arrow_array = test_series.to_arrow()
     schema_capsule, array_capsule = arrow_array.__arrow_c_array__()
-    print("   ✓ Capsules created")
+    print("   Capsules created")
     
     # Extract pointers from capsules
     print("\n3. Extracting raw pointers from capsules...")
     schema_ptr = capsule_to_pointer(schema_capsule, "arrow_schema")
     array_ptr = capsule_to_pointer(array_capsule, "arrow_array")
-    print(f"   ✓ Pointers extracted (schema={hex(schema_ptr)}, array={hex(array_ptr)})")
+    print(f"   Pointers extracted (schema={hex(schema_ptr)}, array={hex(array_ptr)})")
     
     # Verify in C++
     print("\n4. Verifying in C++ (sparrow)...")
     result = lib.verify_array_size_from_pointers(schema_ptr, array_ptr, 5)
     
     assert result == 0, "C++ verification failed"
-    print("   ✓ C++ successfully imported and verified the array!")
+    print("   C++ successfully imported and verified the array!")
     print("\n" + "=" * 70)
-    print("✓ Test 2 PASSED")
+    print("Test 2 PASSED")
     print("=" * 70)
 
 
@@ -291,7 +291,7 @@ def test_roundtrip(cpp_lib):
     assert schema_ptr_out.value is not None, "Received null schema output pointer from C++"
     assert array_ptr_out.value is not None, "Received null array output pointer from C++"
     
-    print("   ✓ C++ processed the array")
+    print("   C++ processed the array")
     
     print("\n4. Converting output to capsules...")
     schema_capsule_out, array_capsule_out = pointer_to_arrow_capsule(schema_ptr_out.value, array_ptr_out.value)
@@ -305,9 +305,9 @@ def test_roundtrip(cpp_lib):
     result_data = result_series.to_list()
     assert original_data == result_data, f"Data mismatch! Original: {original_data}, Result: {result_data}"
     
-    print("   ✓ Round-trip successful - data matches!")
+    print("   Round-trip successful - data matches!")
     print("\n" + "=" * 70)
-    print("✓ Test 3 PASSED")
+    print("Test 3 PASSED")
     print("=" * 70)
 
 
