@@ -85,15 +85,17 @@ add_custom_target(run_tests_with_junit_report
 
 set_target_properties(run_tests_with_junit_report PROPERTIES FOLDER "Tests utilities")
 
-# Polars integration test helper library
-# =======================================
-add_library(test_polars_helper SHARED test_polars_helper.cpp test_polars_helper.hpp)
+# Polars integration test helper - Native Python Extension Module
+# ===============================================================
+# This builds a proper Python extension module (.cpython-*.so) that shares
+# the same Python runtime as the interpreter, avoiding dual-runtime issues.
+
+Python_add_library(test_polars_helper MODULE test_polars_helper_module.cpp)
 
 target_link_libraries(test_polars_helper
-    PUBLIC
+    PRIVATE
         sparrow-pycapsule
         sparrow::sparrow
-        Python::Python
 )
 
 target_compile_features(test_polars_helper PRIVATE cxx_std_20)
@@ -107,6 +109,8 @@ endif()
 set_target_properties(test_polars_helper PROPERTIES
     FOLDER tests
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}
+    # Python modules must not have a debug suffix - Python won't find them
+    DEBUG_POSTFIX ""
 )
 
 # Python integration test
