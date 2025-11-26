@@ -8,6 +8,7 @@ The Sparrow PyCapsule Interface - A C++ library for exchanging Apache Arrow data
 - Exporting sparrow arrays to Python as PyCapsules (Arrow C Data Interface)
 - Importing Arrow data from Python PyCapsules into sparrow arrays
 - Zero-copy data exchange with Python libraries like Polars, PyArrow, and pandas
+- A `SparrowArray` Python class that implements the Arrow PyCapsule Interface
 
 ## Features
 
@@ -17,6 +18,7 @@ The Sparrow PyCapsule Interface - A C++ library for exchanging Apache Arrow data
 - ✅ **Compatible with Polars, PyArrow, pandas** and other Arrow-based libraries
 - ✅ **Bidirectional** data flow (C++ ↔ Python)
 - ✅ **Type-safe** with proper ownership semantics
+- ✅ **SparrowArray Python class** implementing `__arrow_c_array__` protocol
 
 ## Building
 
@@ -53,54 +55,56 @@ ctest --output-on-failure
 
 ## Usage Example
 
-### C++ Side: Exporting Data
+### C++ Side: Creating a SparrowArray for Python
 
 ```cpp
 #include <sparrow-pycapsule/pycapsule.hpp>
+#include <sparrow-pycapsule/sparrow_array_python_class.hpp>
 #include <sparrow/array.hpp>
 
 // Create a sparrow array
 sparrow::array my_array = /* ... */;
 
-// Export to PyCapsules for Python consumption
-auto [schema_capsule, array_capsule] = 
-    sparrow::pycapsule::export_array_to_capsules(my_array);
+// Create a SparrowArray Python object that implements __arrow_c_array__
+PyObject* sparrow_array = sparrow::pycapsule::create_sparrow_array_object(std::move(my_array));
 
-// Pass capsules to Python (via Python C API, pybind11, etc.)
+// Return to Python - it can be used directly with Polars, PyArrow, etc.
 ```
 
-### Python Side: Consuming C++ Data
+### Python Side: Using SparrowArray
 
 ```python
+from test_sparrow_helper import SparrowArray
 import polars as pl
 import pyarrow as pa
 
-# Receive capsules from C++
-# schema_capsule, array_capsule = get_from_cpp()
+# Create SparrowArray from any Arrow-compatible object
+pa_array = pa.array([1, 2, None, 4, 5], type=pa.int32())
+sparrow_array = SparrowArray(pa_array)
 
-# Import into PyArrow
-arrow_array = pa.Array._import_from_c_capsule(schema_capsule, array_capsule)
+# SparrowArray implements __arrow_c_array__, so it works with Polars
+# Using Polars internal API for primitive arrays:
+from polars._plr import PySeries
+from polars._utils.wrap import wrap_s
 
-# Convert to Polars
-series = pl.from_arrow(arrow_array)
+ps = PySeries.from_arrow_c_array(sparrow_array)
+series = wrap_s(ps)
+print(series)  # shape: (5,), dtype: Int32
 
-# Use in Polars DataFrame
-df = pl.DataFrame({"my_column": series})
+# Get array size
+print(sparrow_array.size())  # 5
 ```
 
 ### Python Side: Exporting to C++
 
 ```python
-import polars as pl
+import pyarrow as pa
 
-# Create Polars data
-series = pl.Series([1, 2, None, 4, 5])
+# Any object implementing __arrow_c_array__ can be imported by sparrow
+arrow_array = pa.array([1, 2, None, 4, 5])
 
-# Convert to Arrow and export as capsules
-arrow_array = series.to_arrow()
-schema_capsule, array_capsule = arrow_array.__arrow_c_array__()
-
-# Pass to C++
+# The SparrowArray constructor accepts any ArrowArrayExportable
+sparrow_array = SparrowArray(arrow_array)
 ```
 
 ### C++ Side: Importing from Python
@@ -108,7 +112,7 @@ schema_capsule, array_capsule = arrow_array.__arrow_c_array__()
 ```cpp
 #include <sparrow-pycapsule/pycapsule.hpp>
 
-// Receive capsules from Python
+// Receive capsules from Python (e.g., from __arrow_c_array__)
 PyObject* schema_capsule = /* ... */;
 PyObject* array_capsule = /* ... */;
 
@@ -121,6 +125,27 @@ sparrow::array imported_array =
 std::cout << "Array size: " << imported_array.size() << std::endl;
 ```
 
+## SparrowArray Python Class
+
+The `SparrowArray` class is a Python type implemented in C++ that:
+
+- **Wraps a sparrow array** and exposes it to Python
+- **Implements `__arrow_c_array__`** (ArrowArrayExportable protocol)
+- **Accepts any ArrowArrayExportable** in its constructor (PyArrow, Polars, etc.)
+- **Provides a `size()` method** to get the number of elements
+
+```python
+# Constructor accepts any object with __arrow_c_array__
+sparrow_array = SparrowArray(pyarrow_array)
+sparrow_array = SparrowArray(another_sparrow_array)
+
+# Implements ArrowArrayExportable protocol
+schema_capsule, array_capsule = sparrow_array.__arrow_c_array__()
+
+# Get array size
+n = sparrow_array.size()
+```
+
 ## Testing
 
 ### C++ Unit Tests
@@ -130,13 +155,12 @@ cd build
 ./bin/Debug/test_sparrow_pycapsule_lib
 ```
 
-### Polars Integration Tests
+### Integration Tests
 
-Test bidirectional data exchange with Polars:
+Test bidirectional data exchange with Polars and PyArrow:
 
 ```bash
-
-# Or with direct execution (better output)
+# Run integration tests (recommended)
 cmake --build . --target run_polars_tests_direct
 
 # Check dependencies first
@@ -153,35 +177,39 @@ The project provides several convenient CMake targets for testing:
 |--------|-------------|
 | `run_tests` | Run all C++ unit tests |
 | `run_tests_with_junit_report` | Run C++ tests with JUnit XML output |
-| `run_polars_tests_direct` | Run Polars test directly (recommended, better output) |
+| `run_polars_tests_direct` | Run integration tests (recommended) |
 | `check_polars_deps` | Check Python dependencies (polars, pyarrow) |
+| `test_library_load` | Debug library loading issues |
 
 **Usage:**
 ```bash
 cd build
 
-# Run Polars integration tests
+# Run integration tests
 cmake --build . --target run_polars_tests_direct
 
 # Check dependencies first
 cmake --build . --target check_polars_deps
 ```
 
-### Debugging Test Failures
-
-If you encounter segmentation faults or other issues:
-
-```bash
-cd build
-
-# Run minimal library loading test (step-by-step debugging)
-cmake --build . --target test_library_load
-
-# Check that libraries exist and dependencies are correct
-cmake --build . --target check_polars_deps
-```
-
 ## API Reference
+
+### SparrowArray Python Class
+
+```cpp
+// Create a SparrowArray Python object from a sparrow::array
+PyObject* create_sparrow_array_object(sparrow::array&& arr);
+
+// Create a SparrowArray from PyCapsules
+PyObject* create_sparrow_array_object_from_capsules(
+    PyObject* schema_capsule, PyObject* array_capsule);
+
+// Register SparrowArray type with a Python module
+int register_sparrow_array_type(PyObject* module);
+
+// Get the SparrowArray type object
+PyTypeObject* get_sparrow_array_type();
+```
 
 ### Export Functions
 
@@ -196,9 +224,6 @@ cmake --build . --target check_polars_deps
 - `import_array_from_capsules(PyObject* schema, PyObject* array)` - Import complete array
 
 ### Memory Management
-
-- `release_arrow_schema_pycapsule(PyObject* capsule)` - PyCapsule destructor for schema
-- `release_arrow_array_pycapsule(PyObject* capsule)` - PyCapsule destructor for array
 
 All capsules have destructors that properly clean up Arrow structures.
 
@@ -216,27 +241,39 @@ All types support nullable values via the Arrow null bitmap.
 ## Integration with Python Libraries
 
 ### Polars
+
 ```python
-series = pl.Series([1, 2, 3])
-arrow_array = series.to_arrow()
-schema_capsule, array_capsule = arrow_array.__arrow_c_array__()
-# Pass to C++
+from polars._plr import PySeries
+from polars._utils.wrap import wrap_s
+
+# SparrowArray implements __arrow_c_array__, use Polars internal API
+sparrow_array = SparrowArray(some_arrow_array)
+ps = PySeries.from_arrow_c_array(sparrow_array)
+series = wrap_s(ps)
 ```
 
 ### PyArrow
+
 ```python
-arrow_array = pa.array([1, 2, 3])
-schema_capsule, array_capsule = arrow_array.__arrow_c_array__()
-# Pass to C++
+import pyarrow as pa
+
+# Create SparrowArray from PyArrow
+pa_array = pa.array([1, 2, 3])
+sparrow_array = SparrowArray(pa_array)
+
+# Export back to PyArrow
+schema_capsule, array_capsule = sparrow_array.__arrow_c_array__()
 ```
 
 ### pandas (via PyArrow)
+
 ```python
 import pandas as pd
+import pyarrow as pa
+
 series = pd.Series([1, 2, 3])
 arrow_array = pa.Array.from_pandas(series)
-schema_capsule, array_capsule = arrow_array.__arrow_c_array__()
-# Pass to C++
+sparrow_array = SparrowArray(arrow_array)
 ```
 
 ## License
