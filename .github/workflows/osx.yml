@@ -55,10 +55,10 @@ jobs:
         working-directory: build
         run: cmake --build . --target run_tests_with_junit_report
 
-      - name: Run Polars integration tests
+      - name: Run Sparrow integration tests
         if: matrix.build_shared == 'ON'
         working-directory: build
-        run: cmake --build . --target run_polars_tests_direct
+        run: cmake --build . --target run_sparrow_tests_direct
 
       - name: Install
         working-directory: build

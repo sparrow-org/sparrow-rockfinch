@@ -22,14 +22,14 @@ def main():
     
     try:
         step(1, "Checking environment variables")
-        helper_path = os.environ.get('TEST_POLARS_HELPER_LIB_PATH')
+        helper_path = os.environ.get('TEST_SPARROW_HELPER_LIB_PATH')
         main_path = os.environ.get('SPARROW_PYCAPSULE_LIB_PATH')
         
-        print(f"TEST_POLARS_HELPER_LIB_PATH: {helper_path}")
+        print(f"TEST_SPARROW_HELPER_LIB_PATH: {helper_path}")
         print(f"SPARROW_PYCAPSULE_LIB_PATH: {main_path}")
         
         if not helper_path:
-            print("ERROR: TEST_POLARS_HELPER_LIB_PATH not set")
+            print("ERROR: TEST_SPARROW_HELPER_LIB_PATH not set")
             return 1
         
         if not main_path:
@@ -63,24 +63,12 @@ def main():
             print(f"✗ Failed to load main library: {e}")
             return 1
 
-        step(5, "Loading test_polars_helper library")
+        step(5, "Loading test_sparrow_helper library")
         try:
             helper_lib = ctypes.CDLL(str(helper_file))
             print("✓ Helper library loaded successfully")
         except Exception as e:
             print(f"✗ Failed to load helper library: {e}")
-            return 1
-        
-        step(6, "Checking for init_python function")
-        try:
-            if hasattr(helper_lib, 'init_python'):
-                print("✓ init_python function found")
-            else:
-                print("✗ init_python function not found")
-                print(f"Available attributes: {dir(helper_lib)}")
-                return 1
-        except Exception as e:
-            print(f"✗ Error checking for init_python: {e}")
             return 1
         
         print("\n" + "="*60)

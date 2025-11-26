@@ -151,10 +151,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${BINARY_BUILD_DIR}")
 set(SPARROW_PYCAPSULE_HEADERS
     ${SPARROW_PYCAPSULE_INCLUDE_DIR}/sparrow-pycapsule/config/sparrow_pycapsule_version.hpp
     ${SPARROW_PYCAPSULE_INCLUDE_DIR}/sparrow-pycapsule/pycapsule.hpp
+    ${SPARROW_PYCAPSULE_INCLUDE_DIR}/sparrow-pycapsule/sparrow_array_python_class.hpp
 )
 
 set(SPARROW_PYCAPSULE_SOURCES
     src/pycapsule.cpp
+    src/sparrow_array_python_class.cpp
 )
 
 option(SPARROW_PYCAPSULE_BUILD_SHARED "Build sparrow pycapsule as a shared library" ON)

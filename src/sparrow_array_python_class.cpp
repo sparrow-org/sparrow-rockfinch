@@ -1,4 +1,4 @@
-#include "sparrow-pycapsule/SparrowPythonClass.hpp"
+#include "sparrow-pycapsule/sparrow_array_python_class.hpp"
 
 #include <new>
 #include <utility>
@@ -67,6 +67,81 @@ namespace sparrow::pycapsule
         return PyLong_FromSize_t(self->arr->size());
     }
 
+    /**
+     * @brief Constructor for SparrowArray.
+     *
+     * Accepts an object implementing __arrow_c_array__ and imports it.
+     */
+    static PyObject* SparrowArray_new(PyTypeObject* type, PyObject* args, PyObject* kwargs)
+    {
+        static const char* kwlist[] = {"arrow_array", nullptr};
+        PyObject* arrow_array = nullptr;
+
+        if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", const_cast<char**>(kwlist), &arrow_array))
+        {
+            return nullptr;
+        }
+
+        // Get __arrow_c_array__ method from the input object
+        PyObject* arrow_c_array_method = PyObject_GetAttrString(arrow_array, "__arrow_c_array__");
+        if (arrow_c_array_method == nullptr)
+        {
+            PyErr_SetString(
+                PyExc_TypeError,
+                "Input object must implement __arrow_c_array__ (ArrowArrayExportable protocol)"
+            );
+            return nullptr;
+        }
+
+        // Call __arrow_c_array__() to get the capsules
+        PyObject* capsules = PyObject_CallNoArgs(arrow_c_array_method);
+        Py_DECREF(arrow_c_array_method);
+
+        if (capsules == nullptr)
+        {
+            return nullptr;
+        }
+
+        // Unpack the tuple (schema_capsule, array_capsule)
+        if (!PyTuple_Check(capsules) || PyTuple_Size(capsules) != 2)
+        {
+            Py_DECREF(capsules);
+            PyErr_SetString(PyExc_TypeError, "__arrow_c_array__ must return a tuple of 2 elements");
+            return nullptr;
+        }
+
+        PyObject* schema_capsule = PyTuple_GetItem(capsules, 0);
+        PyObject* array_capsule = PyTuple_GetItem(capsules, 1);
+
+        try
+        {
+            sparrow::array arr = import_array_from_capsules(schema_capsule, array_capsule);
+            Py_DECREF(capsules);
+
+            // Allocate the object
+            SparrowArrayObject* self = reinterpret_cast<SparrowArrayObject*>(type->tp_alloc(type, 0));
+            if (self == nullptr)
+            {
+                return nullptr;
+            }
+
+            self->arr = new sparrow::array(std::move(arr));
+            return reinterpret_cast<PyObject*>(self);
+        }
+        catch (const std::bad_alloc&)
+        {
+            Py_DECREF(capsules);
+            PyErr_NoMemory();
+            return nullptr;
+        }
+        catch (const std::exception& e)
+        {
+            Py_DECREF(capsules);
+            PyErr_SetString(PyExc_RuntimeError, e.what());
+            return nullptr;
+        }
+    }
+
     static PyMethodDef SparrowArray_methods[] = {
         {"__arrow_c_array__",
          reinterpret_cast<PyCFunction>(SparrowArray_arrow_c_array),
@@ -99,12 +174,17 @@ namespace sparrow::pycapsule
         .tp_dealloc = reinterpret_cast<destructor>(SparrowArray_dealloc),
         .tp_flags = Py_TPFLAGS_DEFAULT,
         .tp_doc = PyDoc_STR(
-            "SparrowArray - Arrow array wrapper implementing __arrow_c_array__.\n\n"
+            "SparrowArray(arrow_array) - Arrow array wrapper implementing __arrow_c_array__.\n\n"
             "This class wraps a sparrow array and implements the Arrow PyCapsule\n"
             "Interface (ArrowArrayExportable protocol), allowing it to be passed\n"
-            "directly to libraries like Polars via pl.from_arrow()."
+            "directly to libraries like Polars via pl.from_arrow().\n\n"
+            "Parameters\n"
+            "----------\n"
+            "arrow_array : ArrowArrayExportable\n"
+            "    An object implementing __arrow_c_array__ (e.g., PyArrow array)."
         ),
         .tp_methods = SparrowArray_methods,
+        .tp_new = SparrowArray_new,
     };
 
     static bool type_initialized = false;
