@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Integration test for sparrow-pycapsule with Polars.
+Integration test for sparrow-pycapsule with Polars and PyArrow.
 
-This test demonstrates bidirectional data exchange between sparrow (C++) and Polars (Python)
-using the Arrow C Data Interface via sparrow::pycapsule. The test_polars_helper module is
-a native Python extension that uses sparrow::pycapsule::export_array_to_capsules() and
-import_array_from_capsules() to create and consume Arrow PyCapsules directly.
+This test demonstrates:
+1. Sparrow → Polars: Create array in C++ (sparrow), import to Polars
+2. PyArrow → Sparrow: Create array in PyArrow, import to sparrow
+
+The C++ SparrowArray class implements the Arrow PyCapsule Interface (__arrow_c_array__),
+allowing direct integration with Polars without going through PyArrow.
 """
 
 import sys
@@ -15,6 +17,8 @@ from pathlib import Path
 import pytest
 import polars as pl
 import pyarrow as pa
+from polars._plr import PySeries
+from polars._utils.wrap import wrap_s
 
 
 def setup_module_path():
@@ -54,131 +58,154 @@ import test_polars_helper  # noqa: E402
 
 
 # =============================================================================
-# Test 1: C++ -> Python (Create array in sparrow, import to Polars)
+# Helper function to convert ArrowArrayExportable to Polars Series
 # =============================================================================
 
 
-class TestCppToPython:
-    """Test creating an array in C++ (sparrow) and importing to Python/Polars."""
+def arrow_array_to_series(arrow_array, name: str = "") -> pl.Series:
+    """
+    Convert an object implementing __arrow_c_array__ to a Polars Series.
+    
+    This function uses Polars' internal PySeries.from_arrow_c_array to create
+    a Series directly from an Arrow array.
+    
+    Parameters
+    ----------
+    arrow_array : ArrowArrayExportable
+        An object that implements __arrow_c_array__ method.
+    name : str, optional
+        Name for the resulting Series. Default is empty string.
+    
+    Returns
+    -------
+    pl.Series
+        A Polars Series containing the array data.
+    """
+    ps = PySeries.from_arrow_c_array(arrow_array)
+    series = wrap_s(ps)
+    if name:
+        series = series.alias(name)
+    return series
 
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Create test array capsules from C++."""
-        self.schema_capsule, self.array_capsule = (
-            test_polars_helper.create_test_array_capsules()
-        )
 
-    def test_step1_create_capsules_in_cpp(self):
-        """Step 1: Create PyCapsules in C++ using sparrow::pycapsule."""
-        assert self.schema_capsule is not None, "Received null schema capsule from C++"
-        assert self.array_capsule is not None, "Received null array capsule from C++"
+# =============================================================================
+# Test 1: Sparrow → Polars (Create array in C++, import to Polars)
+# =============================================================================
 
-    def test_step2_import_to_pyarrow(self):
-        """Step 2: Import PyCapsules to PyArrow."""
-        arrow_array = pa.Array._import_from_c_capsule(
-            self.schema_capsule, self.array_capsule
-        )
-        assert arrow_array.type == pa.int32(), f"Expected int32, got {arrow_array.type}"
-        assert arrow_array.to_pylist() == [10, 20, None, 40, 50]
 
-    def test_step3_convert_to_polars(self):
-        """Step 3: Convert PyArrow array to Polars series."""
-        arrow_array = pa.Array._import_from_c_capsule(
-            self.schema_capsule, self.array_capsule
-        )
-        polars_series = pl.from_arrow(arrow_array)
+class TestSparrowToPolars:
+    """Test creating an array in C++ (sparrow) and importing to Polars."""
 
+    def test_create_sparrow_array(self):
+        """Create a SparrowArray in C++ that implements __arrow_c_array__."""
+        sparrow_array = test_polars_helper.create_test_array()
+        
+        assert sparrow_array is not None, "Received null SparrowArray from C++"
+        assert hasattr(sparrow_array, '__arrow_c_array__'), "SparrowArray missing __arrow_c_array__ method"
+        assert sparrow_array.size() == 5, f"Expected size 5, got {sparrow_array.size()}"
+
+    def test_sparrow_to_polars_series(self):
+        """Convert SparrowArray to Polars Series using the Arrow PyCapsule Interface."""
+        sparrow_array = test_polars_helper.create_test_array()
+        polars_series = arrow_array_to_series(sparrow_array)
+
+        assert polars_series.dtype == pl.Int32, f"Expected Int32, got {polars_series.dtype}"
         expected = [10, 20, None, 40, 50]
         actual = polars_series.to_list()
         assert expected == actual, f"Data mismatch! Expected: {expected}, Actual: {actual}"
 
+    def test_sparrow_to_polars_preserves_nulls(self):
+        """Verify that null values from sparrow are preserved in Polars."""
+        sparrow_array = test_polars_helper.create_test_array()
+        polars_series = arrow_array_to_series(sparrow_array)
+        
+        # The test array has a null at index 2
+        values = polars_series.to_list()
+        assert values[2] is None, "Null value not preserved at index 2"
+
 
 # =============================================================================
-# Test 2: Python -> C++ (Export Polars to sparrow)
+# Test 2: PyArrow → Sparrow (Create array in PyArrow, import to sparrow)
 # =============================================================================
 
 
-class TestPythonToCpp:
-    """Test exporting Polars data to C++ (sparrow)."""
+class TestPyArrowToSparrow:
+    """Test creating an array in PyArrow and importing to sparrow."""
 
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Create Polars series and export to capsules."""
-        self.test_series = pl.Series([100, 200, None, 400, 500], dtype=pl.Int32)
-        self.arrow_array = self.test_series.to_arrow()
-        self.schema_capsule, self.array_capsule = self.arrow_array.__arrow_c_array__()
-
-    def test_step1_create_polars_series(self):
-        """Step 1: Create Polars series."""
-        assert self.test_series.to_list() == [100, 200, None, 400, 500]
-        assert self.test_series.dtype == pl.Int32
-
-    def test_step2_export_to_capsules(self):
-        """Step 2: Export Polars series to Arrow PyCapsules."""
-        assert self.schema_capsule is not None, "Schema capsule is None"
-        assert self.array_capsule is not None, "Array capsule is None"
-
-    def test_step3_import_in_sparrow(self):
-        """Step 3: Import and verify in sparrow using sparrow::pycapsule."""
+    def test_pyarrow_to_sparrow_via_capsules(self):
+        """Import PyArrow array to sparrow using PyCapsules."""
+        # Create a PyArrow array
+        pa_array = pa.array([100, 200, None, 400, 500], type=pa.int32())
+        
+        # Export to PyCapsules using Arrow PyCapsule Interface
+        schema_capsule, array_capsule = pa_array.__arrow_c_array__()
+        
+        # Verify sparrow can import and read the data
         result = test_polars_helper.verify_array_size_from_capsules(
-            self.schema_capsule, self.array_capsule, 5
+            schema_capsule, array_capsule, 5
         )
-        assert result is True, "C++ verification failed"
+        assert result is True, "Sparrow failed to import PyArrow array"
 
-
-# =============================================================================
-# Test 3: Round-trip (Python -> sparrow -> Python)
-# =============================================================================
-
-
-class TestRoundtrip:
-    """Test round-trip: Python -> C++ (sparrow) -> Python."""
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Create original series and export to capsules."""
-        self.original_series = pl.Series([1, 2, None, 4, 5], dtype=pl.Int32)
-        self.arrow_array = self.original_series.to_arrow()
-        self.schema_capsule_in, self.array_capsule_in = (
-            self.arrow_array.__arrow_c_array__()
+    def test_pyarrow_roundtrip_through_sparrow(self):
+        """Round-trip: PyArrow → sparrow → Polars."""
+        # Create a PyArrow array
+        pa_array = pa.array([1, 2, None, 4, 5], type=pa.int32())
+        
+        # Export to PyCapsules
+        schema_capsule, array_capsule = pa_array.__arrow_c_array__()
+        
+        # Round-trip through sparrow (import then export)
+        schema_out, array_out = test_polars_helper.roundtrip_array_capsules(
+            schema_capsule, array_capsule
         )
+        
+        # Import the result into Polars using a wrapper
+        class CapsuleWrapper:
+            def __init__(self, schema, array):
+                self._schema = schema
+                self._array = array
+            def __arrow_c_array__(self, requested_schema=None):
+                return self._schema, self._array
+        
+        wrapper = CapsuleWrapper(schema_out, array_out)
+        result_series = arrow_array_to_series(wrapper)
+        
+        # Verify data matches
+        expected = [1, 2, None, 4, 5]
+        actual = result_series.to_list()
+        assert expected == actual, f"Data mismatch! Expected: {expected}, Actual: {actual}"
 
-    def test_step1_create_original_series(self):
-        """Step 1: Create original Polars series."""
-        assert self.original_series.to_list() == [1, 2, None, 4, 5]
-
-    def test_step2_export_to_capsules(self):
-        """Step 2: Export to Arrow PyCapsules."""
-        assert self.schema_capsule_in is not None
-        assert self.array_capsule_in is not None
-
-    def test_step3_roundtrip_through_sparrow(self):
-        """Step 3: Round-trip through sparrow using sparrow::pycapsule."""
-        schema_capsule_out, array_capsule_out = (
-            test_polars_helper.roundtrip_array_capsules(
-                self.schema_capsule_in, self.array_capsule_in
-            )
+    def test_pyarrow_nulls_preserved_in_sparrow(self):
+        """Verify that null values from PyArrow are preserved through sparrow."""
+        # Create a PyArrow array with nulls
+        pa_array = pa.array([None, 1, None, 3, None], type=pa.int32())
+        
+        # Export to PyCapsules
+        schema_capsule, array_capsule = pa_array.__arrow_c_array__()
+        
+        # Round-trip through sparrow
+        schema_out, array_out = test_polars_helper.roundtrip_array_capsules(
+            schema_capsule, array_capsule
         )
-        assert schema_capsule_out is not None, "Received null schema capsule from C++"
-        assert array_capsule_out is not None, "Received null array capsule from C++"
-
-    def test_step4_import_back_to_python(self):
-        """Step 4: Import back to Python and verify data matches."""
-        schema_capsule_out, array_capsule_out = (
-            test_polars_helper.roundtrip_array_capsules(
-                self.schema_capsule_in, self.array_capsule_in
-            )
-        )
-        arrow_array_out = pa.Array._import_from_c_capsule(
-            schema_capsule_out, array_capsule_out
-        )
-        result_series = pl.from_arrow(arrow_array_out)
-
-        original_data = self.original_series.to_list()
-        result_data = result_series.to_list()
-        assert (
-            original_data == result_data
-        ), f"Data mismatch! Original: {original_data}, Result: {result_data}"
+        
+        # Import into Polars
+        class CapsuleWrapper:
+            def __init__(self, schema, array):
+                self._schema = schema
+                self._array = array
+            def __arrow_c_array__(self, requested_schema=None):
+                return self._schema, self._array
+        
+        wrapper = CapsuleWrapper(schema_out, array_out)
+        result_series = arrow_array_to_series(wrapper)
+        
+        # Check null positions
+        values = result_series.to_list()
+        assert values[0] is None, "Null not preserved at index 0"
+        assert values[1] == 1, "Value changed at index 1"
+        assert values[2] is None, "Null not preserved at index 2"
+        assert values[3] == 3, "Value changed at index 3"
+        assert values[4] is None, "Null not preserved at index 4"
 
 
 if __name__ == "__main__":

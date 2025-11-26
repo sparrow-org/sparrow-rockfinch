@@ -20,6 +20,41 @@
 #include <sparrow/utils/nullable.hpp>
 
 #include <sparrow-pycapsule/pycapsule.hpp>
+#include <sparrow-pycapsule/SparrowPythonClass.hpp>
+
+/**
+ * Create a test array and return a SparrowArray object.
+ * 
+ * Python signature: create_test_array() -> SparrowArray
+ */
+static PyObject* py_create_test_array(PyObject* self, PyObject* args)
+{
+    (void)self;
+    (void)args;
+
+    try
+    {
+        // Create a test array with nullable integers
+        std::vector<sparrow::nullable<int32_t>> values = {
+            sparrow::make_nullable<int32_t>(10, true),
+            sparrow::make_nullable<int32_t>(20, true),
+            sparrow::make_nullable<int32_t>(0, false),  // null
+            sparrow::make_nullable<int32_t>(40, true),
+            sparrow::make_nullable<int32_t>(50, true)
+        };
+
+        sparrow::primitive_array<int32_t> prim_array(std::move(values));
+        sparrow::array arr(std::move(prim_array));
+
+        // Return a SparrowArray object that implements __arrow_c_array__
+        return sparrow::pycapsule::create_sparrow_array_object(std::move(arr));
+    }
+    catch (const std::exception& e)
+    {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
+        return nullptr;
+    }
+}
 
 /**
  * Create a test array and return PyCapsules.
@@ -62,6 +97,72 @@ static PyObject* py_create_test_array_capsules(PyObject* self, PyObject* args)
     }
     catch (const std::exception& e)
     {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
+        return nullptr;
+    }
+}
+
+/**
+ * Import from an object implementing __arrow_c_array__ and return a SparrowArray.
+ * 
+ * Python signature: roundtrip_array(arrow_array) -> SparrowArray
+ */
+static PyObject* py_roundtrip_array(PyObject* self, PyObject* args)
+{
+    (void)self;
+
+    PyObject* arrow_array = nullptr;
+
+    if (!PyArg_ParseTuple(args, "O", &arrow_array))
+    {
+        return nullptr;
+    }
+
+    // Get __arrow_c_array__ method from the input object
+    PyObject* arrow_c_array_method = PyObject_GetAttrString(arrow_array, "__arrow_c_array__");
+    if (arrow_c_array_method == nullptr)
+    {
+        PyErr_SetString(PyExc_TypeError, "Object does not implement __arrow_c_array__");
+        return nullptr;
+    }
+
+    // Call __arrow_c_array__() to get (schema_capsule, array_capsule)
+    PyObject* capsules = PyObject_CallObject(arrow_c_array_method, nullptr);
+    Py_DECREF(arrow_c_array_method);
+
+    if (capsules == nullptr)
+    {
+        return nullptr;
+    }
+
+    if (!PyTuple_Check(capsules) || PyTuple_Size(capsules) != 2)
+    {
+        Py_DECREF(capsules);
+        PyErr_SetString(PyExc_TypeError, "__arrow_c_array__ must return a tuple of 2 capsules");
+        return nullptr;
+    }
+
+    PyObject* schema_capsule = PyTuple_GetItem(capsules, 0);
+    PyObject* array_capsule = PyTuple_GetItem(capsules, 1);
+
+    try
+    {
+        // Import from PyCapsules using sparrow::pycapsule
+        sparrow::array arr = sparrow::pycapsule::import_array_from_capsules(
+            schema_capsule,
+            array_capsule
+        );
+
+        Py_DECREF(capsules);
+
+        std::cout << "Roundtrip array size: " << arr.size() << '\n';
+
+        // Return a SparrowArray object that implements __arrow_c_array__
+        return sparrow::pycapsule::create_sparrow_array_object(std::move(arr));
+    }
+    catch (const std::exception& e)
+    {
+        Py_DECREF(capsules);
         PyErr_SetString(PyExc_RuntimeError, e.what());
         return nullptr;
     }
@@ -166,10 +267,22 @@ static PyObject* py_verify_array_size_from_capsules(PyObject* self, PyObject* ar
 // Method definitions
 static PyMethodDef TestPolarsHelperMethods[] = {
     {
+        "create_test_array",
+        py_create_test_array,
+        METH_NOARGS,
+        "Create a test array and return a SparrowArray object implementing __arrow_c_array__."
+    },
+    {
         "create_test_array_capsules",
         py_create_test_array_capsules,
         METH_NOARGS,
         "Create a test array and return (schema_capsule, array_capsule) tuple."
+    },
+    {
+        "roundtrip_array",
+        py_roundtrip_array,
+        METH_VARARGS,
+        "Import from an object implementing __arrow_c_array__ and return a SparrowArray."
     },
     {
         "roundtrip_array_capsules",
@@ -199,5 +312,18 @@ static struct PyModuleDef test_polars_helper_module = {
 // Module initialization function
 PyMODINIT_FUNC PyInit_test_polars_helper(void)
 {
-    return PyModule_Create(&test_polars_helper_module);
+    PyObject* module = PyModule_Create(&test_polars_helper_module);
+    if (module == nullptr)
+    {
+        return nullptr;
+    }
+
+    // Register the SparrowArray type with this module
+    if (sparrow::pycapsule::register_sparrow_array_type(module) < 0)
+    {
+        Py_DECREF(module);
+        return nullptr;
+    }
+
+    return module;
 }
