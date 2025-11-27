@@ -10,6 +10,9 @@ dependencies:
   - python
   # Tests
   - doctest
+  - polars
+  - pyarrow
+  - pytest
   # Documentation
   - doxygen
   - graphviz
