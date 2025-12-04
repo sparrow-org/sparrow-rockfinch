@@ -46,17 +46,16 @@ class SparrowArrayType(ArrowArrayExportable, Protocol):
 def _get_module_name_from_path(file_path: Path) -> str:
     """Extract the module name from a .so/.pyd file path.
     
-    Handles names like 'sparrow_rockfinchd.cpython-312-x86_64-linux-gnu.so'
-    and extracts 'sparrow_rockfinchd'.
+    Handles various naming patterns:
+    - Linux: 'sparrow_rockfinchd.cpython-312-x86_64-linux-gnu.so' -> 'sparrow_rockfinchd'
+    - Windows: 'sparrow_rockfinch.cp314-win_amd64.pyd' -> 'sparrow_rockfinch'
+    - Simple: 'module.so' or 'module.pyd' -> 'module'
     """
     name = file_path.name
-    # Remove platform suffix (e.g., .cpython-312-x86_64-linux-gnu.so)
-    if '.cpython-' in name:
-        name = name.split('.cpython-')[0]
-    elif name.endswith('.so'):
-        name = name[:-3]
-    elif name.endswith('.pyd'):
-        name = name[:-4]
+    # The module name is always the part before the first dot
+    # This handles all patterns: name.cpython-..., name.cp314-..., name.so, name.pyd
+    if '.' in name:
+        name = name.split('.')[0]
     return name
 
 
