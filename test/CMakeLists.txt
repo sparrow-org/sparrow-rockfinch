@@ -101,6 +101,9 @@ target_compile_definitions(test_sparrow_helper PRIVATE
 set_target_properties(test_sparrow_helper PROPERTIES
     FOLDER tests
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}
+    # Set RPATH so the module can find libsparrow-pycapsule at runtime
+    BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-pycapsule>"
+    INSTALL_RPATH "$ORIGIN;@loader_path"
 )
 
 # Python integration test
