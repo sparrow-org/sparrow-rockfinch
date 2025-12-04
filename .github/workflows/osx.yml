@@ -61,6 +61,7 @@ jobs:
         run: cmake --build . --target run_sparrow_tests_direct
 
       - name: Install
+        if: matrix.build_shared == 'ON'
         working-directory: build
         run: cmake --install .
 
@@ -101,5 +102,6 @@ jobs:
         run: cmake --build . --target run_tests_with_junit_report
 
       - name: Install
+        if: matrix.build_shared == 'ON'
         working-directory: build
         run: sudo cmake --install .

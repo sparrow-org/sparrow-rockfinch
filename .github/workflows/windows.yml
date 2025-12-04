@@ -19,7 +19,7 @@ jobs:
         build_shared: [ON, OFF]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Create build environment
         uses: mamba-org/setup-micromamba@v2
@@ -61,6 +61,7 @@ jobs:
         run: cmake --build . --config ${{ matrix.build_type }} --target run_sparrow_tests_direct
 
       - name: Install
+        if: matrix.build_shared == 'ON'
         working-directory: build
         run: cmake --install . --config ${{ matrix.build_type }}
 
@@ -72,7 +73,7 @@ jobs:
         build_shared: [ON, OFF]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure using cmake
         run: |
@@ -95,6 +96,7 @@ jobs:
       #  run: cmake --build . --config ${{ matrix.build_type }} --target run_tests_with_junit_report
 
       - name: Install
+        if: matrix.build_shared == 'ON'
         working-directory: build
         run: cmake --install . --config ${{ matrix.build_type }}
         
