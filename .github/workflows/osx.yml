@@ -95,7 +95,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
           -DSPARROW_PYCAPSULE_BUILD_SHARED=${{ matrix.build_shared }} \
           -DSPARROW_PYCAPSULE_BUILD_TESTS=ON \
-          -DFETCH_DEPENDENCIES_WITH_CMAKE=MISSING
+          -DFETCH_DEPENDENCIES_WITH_CMAKE=MISSING \
+          -DPython_EXECUTABLE=$(which python3)
 
       - name: Build sparrow-pycapsule
         working-directory: build
