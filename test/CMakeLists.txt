@@ -103,7 +103,9 @@ set_target_properties(test_sparrow_helper PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}
     # Set RPATH so the module can find libsparrow-pycapsule at runtime
     BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-pycapsule>"
-    INSTALL_RPATH "$ORIGIN;@loader_path"
+    BUILD_RPATH_USE_ORIGIN ON
+    MACOSX_RPATH ON
+    INSTALL_RPATH "@loader_path"
 )
 
 # Python integration test
@@ -146,6 +148,10 @@ if(Python_Interpreter_FOUND)
         COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_MODULE_PATH=$<TARGET_FILE:sparrow_rockfinch>"
         COMMAND ${CMAKE_COMMAND} -E echo "  TEST_SPARROW_HELPER_LIB_PATH=$<TARGET_FILE:test_sparrow_helper>"
         COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_LIB_DIR=${SPARROW_LIB_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_PYCAPSULE_LIB=$<TARGET_FILE:sparrow-pycapsule>"
+        COMMAND ${CMAKE_COMMAND} -E echo ""
+        COMMAND ${CMAKE_COMMAND} -E echo "Checking library exists..."
+        COMMAND ls -la ${SPARROW_LIB_DIR}
         COMMAND ${CMAKE_COMMAND} -E echo ""
         COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
         COMMAND ${CMAKE_COMMAND} -E echo ""

@@ -263,7 +263,9 @@ if(SPARROW_PYCAPSULE_BUILD_PYTHON_MODULE)
         LIBRARY_OUTPUT_DIRECTORY ${BINARY_BUILD_DIR}
         # Set RPATH so the module can find libsparrow-pycapsule at runtime
         BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-pycapsule>"
-        INSTALL_RPATH "$ORIGIN;@loader_path"
+        BUILD_RPATH_USE_ORIGIN ON
+        MACOSX_RPATH ON
+        INSTALL_RPATH "@loader_path"
     )
 
     # Install Python module (for pip install / wheel building)
