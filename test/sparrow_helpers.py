@@ -43,8 +43,28 @@ class SparrowArrayType(ArrowArrayExportable, Protocol):
         ...
 
 
+def _get_module_name_from_path(file_path: Path) -> str:
+    """Extract the module name from a .so/.pyd file path.
+    
+    Handles names like 'sparrow_rockfinchd.cpython-312-x86_64-linux-gnu.so'
+    and extracts 'sparrow_rockfinchd'.
+    """
+    name = file_path.name
+    # Remove platform suffix (e.g., .cpython-312-x86_64-linux-gnu.so)
+    if '.cpython-' in name:
+        name = name.split('.cpython-')[0]
+    elif name.endswith('.so'):
+        name = name[:-3]
+    elif name.endswith('.pyd'):
+        name = name[:-4]
+    return name
+
+
 def _load_module_from_path(module_name: str, file_path: Path):
-    """Load a Python extension module from a file path."""
+    """Load a Python extension module from a file path.
+    
+    The module_name should match the PyInit_<name> function in the compiled module.
+    """
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     if spec and spec.loader:
         module = importlib.util.module_from_spec(spec)
@@ -61,14 +81,18 @@ def _setup_modules() -> None:
     if sparrow_path:
         sparrow_file = Path(sparrow_path)
         if sparrow_file.exists():
-            _load_module_from_path("sparrow_rockfinch", sparrow_file)
+            # Use actual module name from file (handles debug 'd' suffix)
+            module_name = _get_module_name_from_path(sparrow_file)
+            _load_module_from_path(module_name, sparrow_file)
 
     # Load the test helper module
     helper_path = os.environ.get('TEST_SPARROW_HELPER_LIB_PATH')
     if helper_path:
         helper_file = Path(helper_path)
         if helper_file.exists():
-            _load_module_from_path("test_sparrow_helper", helper_file)
+            # Use actual module name from file (handles debug 'd' suffix)
+            module_name = _get_module_name_from_path(helper_file)
+            _load_module_from_path(module_name, helper_file)
             return
     
     # Fallback: try to find modules in build directory
