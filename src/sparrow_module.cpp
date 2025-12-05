@@ -63,7 +63,7 @@ namespace sparrow::pycapsule
             "Example\n"
             "-------\n"
             ">>> import pyarrow as pa\n"
-            ">>> import sparrow\n"
+            ">>> import sparrow_rockfinch as sp\n"
             ">>> pa_array = pa.array([1, 2, None, 4])\n"
             ">>> sparrow_array = sparrow.SparrowArray.from_arrow(pa_array)")
             .def_static("from_arrow", &sparrow_array_from_arrow,
