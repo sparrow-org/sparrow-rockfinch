@@ -1,10 +1,10 @@
-# sparrow-pycapsule
+# sparrow-rockfinch
 
 The Sparrow PyCapsule Interface - A C++ library for exchanging Apache Arrow data between C++ and Python using the Arrow C Data Interface via PyCapsules.
 
 ## Overview
 
-`sparrow-pycapsule` provides a clean C++ API for:
+`sparrow-rockfinch` provides a clean C++ API for:
 - Exporting sparrow arrays to Python as PyCapsules (Arrow C Data Interface)
 - Importing Arrow data from Python PyCapsules into sparrow arrays
 - Zero-copy data exchange with Python libraries like Polars, PyArrow, and pandas
@@ -27,7 +27,7 @@ The Sparrow PyCapsule Interface - A C++ library for exchanging Apache Arrow data
 ```bash
 # Using conda (recommended)
 conda env create -f environment-dev.yml
-conda activate sparrow-pycapsule
+conda activate sparrow-rockfinch
 
 # Or install manually
 # - CMake >= 3.28
@@ -48,7 +48,7 @@ cmake --build .
 
 ```bash
 mkdir build && cd build
-cmake .. -DSPARROW_PYCAPSULE_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DSPARROW_ROCKFINCH_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
 cmake --build .
 ctest --output-on-failure
 ```
@@ -58,8 +58,8 @@ ctest --output-on-failure
 ### C++ Side: Creating a SparrowArray for Python
 
 ```cpp
-#include <sparrow-pycapsule/pycapsule.hpp>
-#include <sparrow-pycapsule/sparrow_array_python_class.hpp>
+#include <sparrow-rockfinch/pycapsule.hpp>
+#include <sparrow-rockfinch/sparrow_array_python_class.hpp>
 #include <sparrow/array.hpp>
 
 // Create a sparrow array
@@ -110,7 +110,7 @@ sparrow_array = SparrowArray(arrow_array)
 ### C++ Side: Importing from Python
 
 ```cpp
-#include <sparrow-pycapsule/pycapsule.hpp>
+#include <sparrow-rockfinch/pycapsule.hpp>
 
 // Receive capsules from Python (e.g., from __arrow_c_array__)
 PyObject* schema_capsule = /* ... */;
@@ -152,7 +152,7 @@ n = sparrow_array.size()
 
 ```bash
 cd build
-./bin/Debug/test_sparrow_pycapsule_lib
+./bin/Debug/test_sparrow_ROCKFINCH_lib
 ```
 
 ### Integration Tests

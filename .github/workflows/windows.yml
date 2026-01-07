@@ -39,16 +39,16 @@ jobs:
           cmake -S ./ -B ./build \
           -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
           -DCMAKE_PREFIX_PATH=$GLOB_PREFIX_PATH \
-          -DSPARROW_PYCAPSULE_BUILD_SHARED=${{ matrix.build_shared }} \
-          -DSPARROW_PYCAPSULE_BUILD_TESTS=ON
+          -DSPARROW_ROCKFINCH_BUILD_SHARED=${{ matrix.build_shared }} \
+          -DSPARROW_ROCKFINCH_BUILD_TESTS=ON
 
-      - name: Build sparrow-pycapsule
+      - name: Build sparrow-rockfinch
         working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target sparrow-pycapsule
+        run: cmake --build . --config ${{ matrix.build_type }} --target sparrow-rockfinch
 
       - name: Build tests
         working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_pycapsule_lib
+        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_ROCKFINCH_lib
 
       - name: Run tests
         working-directory: build
@@ -78,17 +78,17 @@ jobs:
       - name: Configure using cmake
         run: |
           cmake -S ./ -B ./build \
-          -DSPARROW_PYCAPSULE_BUILD_SHARED=${{ matrix.build_shared }} \
-          -DSPARROW_PYCAPSULE_BUILD_TESTS=ON \
+          -DSPARROW_ROCKFINCH_BUILD_SHARED=${{ matrix.build_shared }} \
+          -DSPARROW_ROCKFINCH_BUILD_TESTS=ON \
           -DFETCH_DEPENDENCIES_WITH_CMAKE=MISSING
 
-      - name: Build sparrow-pycapsule
+      - name: Build sparrow-rockfinch
         working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target sparrow-pycapsule
+        run: cmake --build . --config ${{ matrix.build_type }} --target sparrow-rockfinch
 
       - name: Build tests
         working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_pycapsule_lib
+        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_ROCKFINCH_lib
 
       - name: Run tests
         working-directory: build

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Integration test for sparrow-pycapsule with Polars and PyArrow.
+Integration test for sparrow-rockfinch with Polars and PyArrow.
 
 This test demonstrates:
 1. Sparrow → Polars: Create array in C++ (sparrow), import to Polars

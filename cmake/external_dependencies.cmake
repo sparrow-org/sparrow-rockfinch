@@ -45,7 +45,7 @@ function(find_package_or_fetch)
     endif()
 endfunction()
 
-set(SPARROW_BUILD_SHARED ${SPARROW_PYCAPSULE_BUILD_SHARED})
+set(SPARROW_BUILD_SHARED ${SPARROW_ROCKFINCH_BUILD_SHARED})
 find_package_or_fetch(
     PACKAGE_NAME sparrow
     GIT_REPOSITORY https://github.com/man-group/sparrow.git
@@ -56,7 +56,7 @@ if(NOT TARGET sparrow::sparrow)
     add_library(sparrow::sparrow ALIAS sparrow)
 endif()
 
-if(SPARROW_PYCAPSULE_BUILD_TESTS)
+if(SPARROW_ROCKFINCH_BUILD_TESTS)
     find_package_or_fetch(
         PACKAGE_NAME doctest
         GIT_REPOSITORY https://github.com/doctest/doctest.git

@@ -19,7 +19,7 @@ cmake_policy(SET CMP0091 NEW)
 set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT Embedded)
 cmake_policy(SET CMP0141 NEW)
 
-project(sparrow-pycapsule CXX)
+project(sparrow-rockfinch CXX)
 
 if(NOT CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 20)
@@ -35,8 +35,8 @@ message(DEBUG "CMake module path: ${CMAKE_MODULE_PATH}")
 
 include(external_dependencies)
 
-set(SPARROW_PYCAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(SPARROW_PYCAPSULE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(SPARROW_ROCKFINCH_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(SPARROW_ROCKFINCH_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(CMAKE_CXX_COMPILER_LAUNCHER)
     message(STATUS "Using C++ compiler launcher: ${CMAKE_CXX_COMPILER_LAUNCHER}")
@@ -45,12 +45,12 @@ endif()
 # Versioning
 # ===========
 
-set(sparrow_pycapsule_version_path "${SPARROW_PYCAPSULE_INCLUDE_DIR}/sparrow-pycapsule/config/sparrow_pycapsule_version.hpp")
-file(STRINGS "${sparrow_pycapsule_version_path}" sparrow_pycapsule_version_defines
-    REGEX "constexpr int SPARROW_PYCAPSULE_VERSION_(MAJOR|MINOR|PATCH)")
+set(sparrow_rockfinch_version_path "${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch/config/sparrow_rockfinch_version.hpp")
+file(STRINGS "${sparrow_rockfinch_version_path}" sparrow_rockfinch_version_defines
+    REGEX "constexpr int SPARROW_ROCKFINCH_VERSION_(MAJOR|MINOR|PATCH)")
 
-foreach(ver ${sparrow_pycapsule_version_defines})
-    if(ver MATCHES "constexpr int SPARROW_PYCAPSULE_VERSION_(MAJOR|MINOR|PATCH) = ([0-9]+);$")
+foreach(ver ${sparrow_rockfinch_version_defines})
+    if(ver MATCHES "constexpr int SPARROW_ROCKFINCH_VERSION_(MAJOR|MINOR|PATCH) = ([0-9]+);$")
         set(PROJECT_VERSION_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}" CACHE INTERNAL "")
     endif()
 endforeach()
@@ -58,31 +58,31 @@ endforeach()
 set(CMAKE_PROJECT_VERSION
     ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-message(STATUS "Building sparrow v${CMAKE_PROJECT_VERSION}")
+message(STATUS "Building sparrow-rockfinch v${CMAKE_PROJECT_VERSION}")
 
 # Binary version
 # See the following URL for explanations about the binary versioning
 # https://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html#Updating-version-info
-file(STRINGS "${sparrow_pycapsule_version_path}" sparrow_pycapsule_version_defines
-    REGEX "constexpr int SPARROW_PYCAPSULE_BINARY_(CURRENT|REVISION|AGE)")
+file(STRINGS "${sparrow_rockfinch_version_path}" sparrow_rockfinch_version_defines
+    REGEX "constexpr int SPARROW_ROCKFINCH_BINARY_(CURRENT|REVISION|AGE)")
 
-foreach(ver ${sparrow_pycapsule_version_defines})
-    if(ver MATCHES "constexpr int SPARROW_PYCAPSULE_BINARY_(CURRENT|REVISION|AGE) = ([0-9]+);$")
-        set(SPARROW_PYCAPSULE_BINARY_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}" CACHE INTERNAL "")
+foreach(ver ${sparrow_rockfinch_version_defines})
+    if(ver MATCHES "constexpr int SPARROW_ROCKFINCH_BINARY_(CURRENT|REVISION|AGE) = ([0-9]+);$")
+        set(SPARROW_ROCKFINCH_BINARY_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}" CACHE INTERNAL "")
     endif()
 endforeach()
 
-set(SPARROW_PYCAPSULE_BINARY_VERSION
-    ${SPARROW_PYCAPSULE_BINARY_CURRENT}.${SPARROW_PYCAPSULE_BINARY_REVISION}.${SPARROW_PYCAPSULE_BINARY_AGE})
+set(SPARROW_ROCKFINCH_BINARY_VERSION
+    ${SPARROW_ROCKFINCH_BINARY_CURRENT}.${SPARROW_ROCKFINCH_BINARY_REVISION}.${SPARROW_ROCKFINCH_BINARY_AGE})
 
-message(STATUS "sparrow pycapsule binary version: v${SPARROW_PYCAPSULE_BINARY_VERSION}")
+message(STATUS "sparrow-rockfinch binary version: v${SPARROW_ROCKFINCH_BINARY_VERSION}")
 
 # Build options
 # =============
 
-option(SPARROW_PYCAPSULE_BUILD_TESTS "Build sparrow test suite" OFF)
-message(STATUS "🔧 Build tests: ${SPARROW_PYCAPSULE_BUILD_TESTS}")
-option(BUILD_DOCS "Build sparrow documentation" OFF)
+option(SPARROW_ROCKFINCH_BUILD_TESTS "Build sparrow-rockfinch test suite" OFF)
+message(STATUS "🔧 Build tests: ${SPARROW_ROCKFINCH_BUILD_TESTS}")
+option(BUILD_DOCS "Build sparrow-rockfinch documentation" OFF)
 message(STATUS "🔧 Build docs: ${BUILD_DOCS}")
 
 set(CMAKE_DEBUG_POSTFIX "d")
@@ -135,7 +135,7 @@ endif()
 
 # include(external_dependencies) // TODO: add external dependencies support
 
-set(SPARROW_PYCAPSULE_COMPILE_DEFINITIONS "" CACHE STRING "List of public compile definitions of the sparrow target")
+set(SPARROW_ROCKFINCH_COMPILE_DEFINITIONS "" CACHE STRING "List of public compile definitions of the sparrow-rockfinch target")
 
 # Build
 # =====
@@ -148,38 +148,38 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${BINARY_BUILD_DIR}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${BINARY_BUILD_DIR}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${BINARY_BUILD_DIR}")
 
-set(SPARROW_PYCAPSULE_HEADERS
-    ${SPARROW_PYCAPSULE_INCLUDE_DIR}/sparrow-pycapsule/config/sparrow_pycapsule_version.hpp
-    ${SPARROW_PYCAPSULE_INCLUDE_DIR}/sparrow-pycapsule/pycapsule.hpp
-    ${SPARROW_PYCAPSULE_INCLUDE_DIR}/sparrow-pycapsule/sparrow_array_python_class.hpp
+set(SPARROW_ROCKFINCH_HEADERS
+    ${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch/config/sparrow_rockfinch_version.hpp
+    ${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch/pycapsule.hpp
+    ${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch/sparrow_array_python_class.hpp
 )
 
-set(SPARROW_PYCAPSULE_SOURCES
+set(SPARROW_ROCKFINCH_SOURCES
     src/pycapsule.cpp
     src/sparrow_array_python_class.cpp
 )
 
-option(SPARROW_PYCAPSULE_BUILD_SHARED "Build sparrow pycapsule as a shared library" ON)
+option(SPARROW_ROCKFINCH_BUILD_SHARED "Build sparrow-rockfinch as a shared library" ON)
 
-if(SPARROW_PYCAPSULE_BUILD_SHARED)
+if(SPARROW_ROCKFINCH_BUILD_SHARED)
     message(STATUS "🔧 Build shared library")
-    set(SPARROW_PYCAPSULE_LIBRARY_TYPE SHARED)
+    set(SPARROW_ROCKFINCH_LIBRARY_TYPE SHARED)
 else()
     message(STATUS "🔧 Build static library")
-    set(SPARROW_PYCAPSULE_LIBRARY_TYPE STATIC)
-    list(APPEND SPARROW_PYCAPSULE_COMPILE_DEFINITIONS SPARROW_PYCAPSULE_STATIC_LIB)
+    set(SPARROW_ROCKFINCH_LIBRARY_TYPE STATIC)
+    list(APPEND SPARROW_ROCKFINCH_COMPILE_DEFINITIONS SPARROW_ROCKFINCH_STATIC_LIB)
 endif()
 
-add_library(sparrow-pycapsule ${SPARROW_PYCAPSULE_LIBRARY_TYPE} ${SPARROW_PYCAPSULE_HEADERS} ${SPARROW_PYCAPSULE_SOURCES})
+add_library(sparrow-rockfinch ${SPARROW_ROCKFINCH_LIBRARY_TYPE} ${SPARROW_ROCKFINCH_HEADERS} ${SPARROW_ROCKFINCH_SOURCES})
 
-target_link_libraries(sparrow-pycapsule
+target_link_libraries(sparrow-rockfinch
     PUBLIC 
         sparrow::sparrow
         Python::Python)
 
-target_compile_definitions(sparrow-pycapsule PUBLIC ${SPARROW_PYCAPSULE_COMPILE_DEFINITIONS})
+target_compile_definitions(sparrow-rockfinch PUBLIC ${SPARROW_ROCKFINCH_COMPILE_DEFINITIONS})
 
-set_property(TARGET sparrow-pycapsule PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET sparrow-rockfinch PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 if(UNIX)
     # CMake does not compute the version number of so files as libtool
@@ -187,54 +187,54 @@ if(UNIX)
     # Apple from this, but that would require having different version
     # numbers depending on the platform. We prefer to follow the
     # libtool pattern everywhere.
-    math(EXPR SPARROW_PYCAPSULE_BINARY_COMPATIBLE "${SPARROW_PYCAPSULE_BINARY_CURRENT} - ${SPARROW_PYCAPSULE_BINARY_AGE}")
+    math(EXPR SPARROW_ROCKFINCH_BINARY_COMPATIBLE "${SPARROW_ROCKFINCH_BINARY_CURRENT} - ${SPARROW_ROCKFINCH_BINARY_AGE}")
     set_target_properties(
-        sparrow-pycapsule
+        sparrow-rockfinch
         PROPERTIES
-        VERSION "${SPARROW_PYCAPSULE_BINARY_COMPATIBLE}.${SPARROW_PYCAPSULE_BINARY_REVISION}.${SPARROW_PYCAPSULE_BINARY_AGE}"
-        SOVERSION ${SPARROW_PYCAPSULE_BINARY_COMPATIBLE}
+        VERSION "${SPARROW_ROCKFINCH_BINARY_COMPATIBLE}.${SPARROW_ROCKFINCH_BINARY_REVISION}.${SPARROW_ROCKFINCH_BINARY_AGE}"
+        SOVERSION ${SPARROW_ROCKFINCH_BINARY_COMPATIBLE}
     )
-    target_compile_options(sparrow-pycapsule PRIVATE "-fvisibility=hidden")
+    target_compile_options(sparrow-rockfinch PRIVATE "-fvisibility=hidden")
 else()
     set_target_properties(
-        sparrow-pycapsule
+        sparrow-rockfinch
         PROPERTIES
-        VERSION ${SPARROW_PYCAPSULE_BINARY_VERSION}
-        SOVERSION ${SPARROW_PYCAPSULE_BINARY_CURRENT}
+        VERSION ${SPARROW_ROCKFINCH_BINARY_VERSION}
+        SOVERSION ${SPARROW_ROCKFINCH_BINARY_CURRENT}
     )
-    target_compile_definitions(sparrow-pycapsule PRIVATE SPARROW_PYCAPSULE_EXPORTS)
+    target_compile_definitions(sparrow-rockfinch PRIVATE SPARROW_ROCKFINCH_EXPORTS)
 endif()
 
-target_include_directories(sparrow-pycapsule PUBLIC
-    $<BUILD_INTERFACE:${SPARROW_PYCAPSULE_INCLUDE_DIR}>
+target_include_directories(sparrow-rockfinch PUBLIC
+    $<BUILD_INTERFACE:${SPARROW_ROCKFINCH_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:include>)
 
 # We do not use non-standard C++
-set_target_properties(sparrow-pycapsule PROPERTIES CMAKE_CXX_EXTENSIONS OFF)
-target_compile_features(sparrow-pycapsule PUBLIC cxx_std_20)
+set_target_properties(sparrow-rockfinch PROPERTIES CMAKE_CXX_EXTENSIONS OFF)
+target_compile_features(sparrow-rockfinch PUBLIC cxx_std_20)
 
 if(ENABLE_COVERAGE)
-    enable_coverage(sparrow-pycapsule)
+    enable_coverage(sparrow-rockfinch)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND WIN32)
-    target_compile_options(sparrow-pycapsule
+    target_compile_options(sparrow-rockfinch
         PUBLIC
         -Wa,-mbig-obj)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if (EMSCRIPTEN)
-        target_compile_options(sparrow-pycapsule
+        target_compile_options(sparrow-rockfinch
         PRIVATE
         -fPIC)
     else ()
-        target_compile_options(sparrow-pycapsule
+        target_compile_options(sparrow-rockfinch
         PUBLIC
         -Wno-c99-extensions)
     endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(sparrow-pycapsule
+    target_compile_options(sparrow-rockfinch
         PUBLIC
             /bigobj
     )
@@ -248,12 +248,12 @@ endif()
 
 # Python module
 # =============
-option(SPARROW_PYCAPSULE_BUILD_PYTHON_MODULE "Build the sparrow Python module" ON)
-message(STATUS "🔧 Build Python module: ${SPARROW_PYCAPSULE_BUILD_PYTHON_MODULE}")
+option(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE "Build the sparrow-rockfinch Python module" ON)
+message(STATUS "🔧 Build Python module: ${SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE}")
 
-if(SPARROW_PYCAPSULE_BUILD_PYTHON_MODULE)
+if(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE)
     nanobind_add_module(sparrow_rockfinch src/sparrow_module.cpp)
-    target_link_libraries(sparrow_rockfinch PRIVATE sparrow-pycapsule sparrow::sparrow)
+    target_link_libraries(sparrow_rockfinch PRIVATE sparrow-rockfinch sparrow::sparrow)
     target_compile_features(sparrow_rockfinch PRIVATE cxx_std_20)
     # Define the module name macro to match the output filename (includes debug suffix)
     target_compile_definitions(sparrow_rockfinch PRIVATE
@@ -261,8 +261,8 @@ if(SPARROW_PYCAPSULE_BUILD_PYTHON_MODULE)
     )
     set_target_properties(sparrow_rockfinch PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${BINARY_BUILD_DIR}
-        # Set RPATH so the module can find libsparrow-pycapsule at runtime
-        BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-pycapsule>"
+        # Set RPATH so the module can find libsparrow-rockfinch at runtime
+        BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-rockfinch>"
         BUILD_RPATH_USE_ORIGIN ON
         MACOSX_RPATH ON
         INSTALL_RPATH "@loader_path"
@@ -285,7 +285,7 @@ endif()
 
 # Tests
 # =====
-if(SPARROW_PYCAPSULE_BUILD_TESTS)
+if(SPARROW_ROCKFINCH_BUILD_TESTS)
     add_subdirectory(test)
 endif()
 
@@ -295,9 +295,9 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 # Install target
-set(SPARROW_PYCAPSULE_EXPORTED_TARGETS sparrow-pycapsule)
+set(SPARROW_ROCKFINCH_EXPORTED_TARGETS sparrow-rockfinch)
 
-install(TARGETS ${SPARROW_PYCAPSULE_EXPORTED_TARGETS}
+install(TARGETS ${SPARROW_ROCKFINCH_EXPORTED_TARGETS}
     EXPORT ${PROJECT_NAME}-targets)
 
 # Makes the project importable from the build directory
@@ -306,7 +306,7 @@ export(EXPORT ${PROJECT_NAME}-targets
     NAMESPACE sparrow::)
 
 # Install headers
-install(DIRECTORY ${SPARROW_PYCAPSULE_INCLUDE_DIR}/sparrow-pycapsule
+install(DIRECTORY ${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     PATTERN ".clang-*" EXCLUDE
     PATTERN "README.md" EXCLUDE)
