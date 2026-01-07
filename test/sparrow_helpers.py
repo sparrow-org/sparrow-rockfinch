@@ -1,5 +1,5 @@
 """
-Python helper module for sparrow-pycapsule integration tests.
+Python helper module for sparrow-rockfinch integration tests.
 
 This module provides helper functions that wrap the C++ SparrowArray class,
 making it easy to create test arrays and perform roundtrip operations.

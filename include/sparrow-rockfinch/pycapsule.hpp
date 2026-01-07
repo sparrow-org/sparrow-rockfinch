@@ -4,7 +4,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-#include <sparrow-pycapsule/config/config.hpp>
+#include <sparrow-rockfinch/config/config.hpp>
 
 // Forward declarations to avoid including heavy headers
 namespace sparrow
@@ -28,7 +28,7 @@ namespace sparrow::pycapsule
      * @param array_capsule PyCapsule containing an ArrowArray
      * @return A sparrow array constructed from the capsules, or an empty array on error
      */
-    SPARROW_PYCAPSULE_API array import_array_from_capsules(PyObject* schema_capsule, PyObject* array_capsule);
+    SPARROW_ROCKFINCH_API array import_array_from_capsules(PyObject* schema_capsule, PyObject* array_capsule);
 
     /**
      * @brief Exports a sparrow array to both schema and array PyCapsules.
@@ -39,5 +39,5 @@ namespace sparrow::pycapsule
      * @param arr The sparrow array to export (will be moved from)
      * @return A pair of (schema_capsule, array_capsule), or (nullptr, nullptr) on error
      */
-    SPARROW_PYCAPSULE_API std::pair<PyObject*, PyObject*> export_array_to_capsules(array& arr);
+    SPARROW_ROCKFINCH_API std::pair<PyObject*, PyObject*> export_array_to_capsules(array& arr);
 }

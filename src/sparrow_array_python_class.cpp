@@ -1,4 +1,4 @@
-#include "sparrow-pycapsule/sparrow_array_python_class.hpp"
+#include "sparrow-rockfinch/sparrow_array_python_class.hpp"
 
 #include <utility>
 

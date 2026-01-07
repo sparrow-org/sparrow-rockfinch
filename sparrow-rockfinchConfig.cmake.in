@@ -1,0 +1,16 @@
+# sparrow-rockfinch cmake module
+# This module sets the following variables in your project::
+#
+#   sparrow-rockfinch_FOUND - true if sparrow found on the system
+#   sparrow-rockfinch_INCLUDE_DIRS - the directory containing sparrow headers
+#   sparrow-rockfinch_LIBRARY - empty
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+if(NOT TARGET sparrow::sparrow-rockfinch )
+    include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+    get_target_property(@PROJECT_NAME@_INCLUDE_DIRS sparrow::sparrow-rockfinch INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(@PROJECT_NAME@_LIBRARY sparrow::sparrow-rockfinch LOCATION)
+endif()

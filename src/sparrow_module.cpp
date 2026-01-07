@@ -1,6 +1,6 @@
 /**
  * @file sparrow_module.cpp
- * @brief Python module definition for sparrow-pycapsule using nanobind.
+ * @brief Python module definition for sparrow-rockfinch using nanobind.
  *
  * This file defines the "sparrow" Python extension module that exposes
  * the SparrowArray class implementing the Arrow PyCapsule Interface.
@@ -9,8 +9,8 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/pair.h>
 
-#include <sparrow-pycapsule/pycapsule.hpp>
-#include <sparrow-pycapsule/sparrow_array_python_class.hpp>
+#include <sparrow-rockfinch/pycapsule.hpp>
+#include <sparrow-rockfinch/sparrow_array_python_class.hpp>
 
 namespace nb = nanobind;
 

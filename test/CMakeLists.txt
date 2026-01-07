@@ -7,18 +7,18 @@ else()
     message(STATUS "Tests build type is ${CMAKE_BUILD_TYPE}")
 endif()
 
-set(SPARROW_PYCAPSULE_TESTS_SOURCES
+set(SPARROW_ROCKFINCH_TESTS_SOURCES
     main.cpp
     test_pycapsule.cpp
 )
 
-set(test_target test_sparrow_pycapsule_lib)
+set(test_target test_sparrow_ROCKFINCH_lib)
 
-add_executable(${test_target} ${SPARROW_PYCAPSULE_TESTS_SOURCES})
+add_executable(${test_target} ${SPARROW_ROCKFINCH_TESTS_SOURCES})
 
 target_link_libraries(${test_target}
     PRIVATE
-    sparrow-pycapsule
+    sparrow-rockfinch
     sparrow::sparrow
     doctest::doctest
 )
@@ -43,7 +43,7 @@ set_tests_properties(${test_target} PROPERTIES
 )
 
 # Add a custom target to run tests
-add_custom_target(run_pycapsule_tests
+add_custom_target(run_ROCKFINCH_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
     DEPENDS ${test_target}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -72,7 +72,7 @@ add_custom_target(run_tests
 
 set_target_properties(run_tests PROPERTIES FOLDER "Tests utilities")
 
-set(JUNIT_REPORT_FILE_DOCTEST ${CMAKE_CURRENT_BINARY_DIR}/test_sparrow-pycapsule_lib_report_doctest.xml)
+set(JUNIT_REPORT_FILE_DOCTEST ${CMAKE_CURRENT_BINARY_DIR}/test_sparrow-rockfinch_lib_report_doctest.xml)
 
 add_custom_target(run_tests_with_junit_report
     COMMAND ${test_target} --reporters=junit --out=${JUNIT_REPORT_FILE_DOCTEST} --no-path-filenames=true
@@ -88,7 +88,7 @@ nanobind_add_module(test_sparrow_helper test_sparrow_helper_module.cpp)
 
 target_link_libraries(test_sparrow_helper
     PRIVATE
-        sparrow-pycapsule
+        sparrow-rockfinch
         sparrow::sparrow
 )
 
@@ -101,8 +101,8 @@ target_compile_definitions(test_sparrow_helper PRIVATE
 set_target_properties(test_sparrow_helper PROPERTIES
     FOLDER tests
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}
-    # Set RPATH so the module can find libsparrow-pycapsule at runtime
-    BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-pycapsule>"
+    # Set RPATH so the module can find libsparrow-rockfinch at runtime
+    BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-rockfinch>"
     BUILD_RPATH_USE_ORIGIN ON
     MACOSX_RPATH ON
     INSTALL_RPATH "@loader_path"
@@ -132,8 +132,8 @@ else()
 endif()
 
 if(Python_Interpreter_FOUND)
-    # Get the directory containing the sparrow-pycapsule library for runtime
-    set(SPARROW_LIB_DIR "$<TARGET_FILE_DIR:sparrow-pycapsule>")
+    # Get the directory containing the sparrow-rockfinch library for runtime
+    set(SPARROW_LIB_DIR "$<TARGET_FILE_DIR:sparrow-rockfinch>")
     
     add_custom_target(run_sparrow_tests_direct
         COMMAND ${CMAKE_COMMAND} -E echo "=================================="
@@ -148,7 +148,7 @@ if(Python_Interpreter_FOUND)
         COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_MODULE_PATH=$<TARGET_FILE:sparrow_rockfinch>"
         COMMAND ${CMAKE_COMMAND} -E echo "  TEST_SPARROW_HELPER_LIB_PATH=$<TARGET_FILE:test_sparrow_helper>"
         COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_LIB_DIR=${SPARROW_LIB_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_PYCAPSULE_LIB=$<TARGET_FILE:sparrow-pycapsule>"
+        COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_ROCKFINCH_LIB=$<TARGET_FILE:sparrow-rockfinch>"
         COMMAND ${CMAKE_COMMAND} -E echo ""
         COMMAND ${CMAKE_COMMAND} -E echo "Checking library exists..."
         COMMAND ls -la ${SPARROW_LIB_DIR}
@@ -162,7 +162,7 @@ if(Python_Interpreter_FOUND)
             "DYLD_LIBRARY_PATH=${SPARROW_LIB_DIR}:$ENV{DYLD_LIBRARY_PATH}"
             ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_sparrow_integration.py
         COMMAND ${CMAKE_COMMAND} -E echo ""
-        DEPENDS test_sparrow_helper sparrow_rockfinch sparrow-pycapsule
+        DEPENDS test_sparrow_helper sparrow_rockfinch sparrow-rockfinch
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Running Sparrow integration tests directly"
         USES_TERMINAL

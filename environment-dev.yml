@@ -1,4 +1,4 @@
-name: sparrow-pycapsule
+name: sparrow-rockfinch
 channels:
   - conda-forge
 dependencies:

@@ -1,6 +1,6 @@
 /**
  * @file test_sparrow_helper_module.cpp
- * @brief Test utilities for sparrow-pycapsule Python integration tests.
+ * @brief Test utilities for sparrow-rockfinch Python integration tests.
  *
  * This module provides helper functions for creating test arrays in C++.
  * The main SparrowArray class is defined in the sparrow module.
@@ -15,7 +15,7 @@
 #include <sparrow/primitive_array.hpp>
 #include <sparrow/utils/nullable.hpp>
 
-#include <sparrow-pycapsule/sparrow_array_python_class.hpp>
+#include <sparrow-rockfinch/sparrow_array_python_class.hpp>
 
 namespace nb = nanobind;
 
@@ -41,7 +41,7 @@ namespace
 
 NB_MODULE(TEST_SPARROW_HELPER_MODULE_NAME, m)
 {
-    m.doc() = "Test utilities for sparrow-pycapsule integration tests.";
+    m.doc() = "Test utilities for sparrow-rockfinch integration tests.";
 
     m.def("create_test_array", &create_test_array,
         "Create a test int32 array with values [10, 20, null, 40, 50].\n\n"
