@@ -1,4 +1,4 @@
-#include <sparrow-pycapsule/pycapsule.hpp>
+#include <sparrow-rockfinch/pycapsule.hpp>
 
 #include <sparrow/array.hpp>
 #include <sparrow/c_interface.hpp>

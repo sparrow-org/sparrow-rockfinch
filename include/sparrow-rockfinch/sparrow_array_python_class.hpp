@@ -5,8 +5,8 @@
 
 #include <sparrow/array.hpp>
 
-#include "sparrow-pycapsule/config/config.hpp"
-#include "sparrow-pycapsule/pycapsule.hpp"
+#include "sparrow-rockfinch/config/config.hpp"
+#include "sparrow-rockfinch/pycapsule.hpp"
 
 namespace sparrow::pycapsule
 {
@@ -20,7 +20,7 @@ namespace sparrow::pycapsule
      * Note: This class is designed to be wrapped by nanobind (or similar)
      * in a Python extension module.
      */
-    class SPARROW_PYCAPSULE_API SparrowArray
+    class SPARROW_ROCKFINCH_API SparrowArray
     {
     public:
         /**

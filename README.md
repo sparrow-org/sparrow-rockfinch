@@ -1,6 +1,6 @@
 # sparrow-rockfinch
 
-The Sparrow PyCapsule Interface - A C++ library for exchanging Apache Arrow data between C++ and Python using the Arrow C Data Interface via PyCapsules.
+The Sparrow Rockfinch Interface - A C++ library for exchanging Apache Arrow data between C++ and Python using the Arrow C Data Interface via PyCapsules.
 
 ## Overview
 
