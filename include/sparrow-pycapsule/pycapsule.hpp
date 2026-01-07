@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <sparrow-pycapsule/config/config.hpp>
 
@@ -16,64 +17,6 @@ struct ArrowArray;
 
 namespace sparrow::pycapsule
 {
-    /**
-     * @brief Capsule destructor for ArrowSchema PyCapsules.
-     *
-     * Calls the schema's release callback if not null, then frees the schema.
-     * This is used as the PyCapsule destructor to ensure proper cleanup.
-     *
-     * @param capsule The PyCapsule containing an ArrowSchema pointer
-     */
-    SPARROW_PYCAPSULE_API void release_arrow_schema_pycapsule(PyObject* capsule);
-
-    /**
-     * @brief Exports a sparrow array's schema to a PyCapsule.
-     *
-     * Creates a new ArrowSchema on the heap and transfers ownership from the array.
-     * The array is moved from and becomes invalid after this call.
-     *
-     * @param arr The sparrow array to export (will be moved from)
-     * @return A new PyCapsule containing the ArrowSchema, or nullptr on error
-     */
-    SPARROW_PYCAPSULE_API PyObject* export_arrow_schema_pycapsule(array& arr);
-
-    /**
-     * @brief Retrieves the ArrowSchema pointer from a PyCapsule.
-     *
-     * @param capsule The PyCapsule to extract the schema from
-     * @return Pointer to the ArrowSchema, or nullptr if the capsule is invalid (sets Python exception)
-     */
-    SPARROW_PYCAPSULE_API ArrowSchema* get_arrow_schema_pycapsule(PyObject* capsule);
-
-    /**
-     * @brief Capsule destructor for ArrowArray PyCapsules.
-     *
-     * Calls the array's release callback if not null, then frees the array.
-     * This is used as the PyCapsule destructor to ensure proper cleanup.
-     *
-     * @param capsule The PyCapsule containing an ArrowArray pointer
-     */
-    SPARROW_PYCAPSULE_API void release_arrow_array_pycapsule(PyObject* capsule);
-
-    /**
-     * @brief Exports a sparrow array's data to a PyCapsule.
-     *
-     * Creates a new ArrowArray on the heap and transfers ownership from the array.
-     * The array is moved from and becomes invalid after this call.
-     *
-     * @param arr The sparrow array to export (will be moved from)
-     * @return A new PyCapsule containing the ArrowArray, or nullptr on error
-     */
-    SPARROW_PYCAPSULE_API PyObject* export_arrow_array_pycapsule(array& arr);
-
-    /**
-     * @brief Retrieves the ArrowArray pointer from a PyCapsule.
-     *
-     * @param capsule The PyCapsule to extract the array from
-     * @return Pointer to the ArrowArray, or nullptr if the capsule is invalid (sets Python exception)
-     */
-    SPARROW_PYCAPSULE_API ArrowArray* get_arrow_array_pycapsule(PyObject* capsule);
-
     /**
      * @brief Imports a sparrow array from schema and array PyCapsules.
      *

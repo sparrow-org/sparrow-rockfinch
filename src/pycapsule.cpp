@@ -1,6 +1,3 @@
-#include <exception>
-#include <string_view>
-
 #include <sparrow-pycapsule/pycapsule.hpp>
 
 #include <sparrow/array.hpp>
@@ -11,106 +8,63 @@ namespace sparrow::pycapsule
     namespace
     {
         // Internal capsule name constants
-        constexpr std::string_view arrow_schema_str = "arrow_schema";
-        constexpr std::string_view arrow_array_str = "arrow_array";
-    }
+        constexpr const char* arrow_schema_str = "arrow_schema";
+        constexpr const char* arrow_array_str = "arrow_array";
 
-    void release_arrow_schema_pycapsule(PyObject* capsule)
-    {
-        if (capsule == nullptr)
+        // Capsule destructor for ArrowSchema
+        void release_arrow_schema_pycapsule(PyObject* capsule)
         {
-            return;
+            if (capsule == nullptr)
+            {
+                return;
+            }
+            auto* schema = static_cast<ArrowSchema*>(PyCapsule_GetPointer(capsule, arrow_schema_str));
+            if (schema == nullptr)
+            {
+                return;
+            }
+            if (schema->release != nullptr)
+            {
+                schema->release(schema);
+            }
+            delete schema;
         }
-        auto schema = static_cast<ArrowSchema*>(PyCapsule_GetPointer(capsule, arrow_schema_str.data()));
-        if (schema == nullptr)
-        {
-            return;
-        }
-        if (schema->release != nullptr)
-        {
-            schema->release(schema);
-        }
-        delete schema;
-    }
 
-    PyObject* export_arrow_schema_pycapsule(array& arr)
-    {
-        // Allocate a new ArrowSchema on the heap and extract (move) the schema
-        ArrowSchema* arrow_schema_ptr = new ArrowSchema();
-        *arrow_schema_ptr = extract_arrow_schema(std::move(arr));
-
-        PyObject* capsule_ptr = PyCapsule_New(
-            arrow_schema_ptr,
-            arrow_schema_str.data(),
-            release_arrow_schema_pycapsule
-        );
-        if (capsule_ptr == nullptr)
+        // Capsule destructor for ArrowArray
+        void release_arrow_array_pycapsule(PyObject* capsule)
         {
-            arrow_schema_ptr->release(arrow_schema_ptr);
-            delete arrow_schema_ptr;
-            return nullptr;
+            if (capsule == nullptr)
+            {
+                return;
+            }
+            auto* array = static_cast<ArrowArray*>(PyCapsule_GetPointer(capsule, arrow_array_str));
+            if (array == nullptr)
+            {
+                return;
+            }
+            if (array->release != nullptr)
+            {
+                array->release(array);
+            }
+            delete array;
         }
-        return capsule_ptr;
-    }
-
-    ArrowSchema* get_arrow_schema_pycapsule(PyObject* capsule)
-    {
-        return static_cast<ArrowSchema*>(PyCapsule_GetPointer(capsule, arrow_schema_str.data()));
-    }
-
-    void release_arrow_array_pycapsule(PyObject* capsule)
-    {
-        if (capsule == nullptr)
-        {
-            return;
-        }
-        auto array = static_cast<ArrowArray*>(PyCapsule_GetPointer(capsule, arrow_array_str.data()));
-        if (array == nullptr)
-        {
-            return;
-        }
-        if (array->release != nullptr)
-        {
-            array->release(array);
-        }
-        delete array;
-    }
-
-    PyObject* export_arrow_array_pycapsule(array& arr)
-    {
-        // Allocate a new ArrowArray on the heap and extract (move) the array
-        ArrowArray* arrow_array_ptr = new ArrowArray();
-        *arrow_array_ptr = extract_arrow_array(std::move(arr));
-
-        PyObject* capsule_ptr = PyCapsule_New(
-            arrow_array_ptr,
-            arrow_array_str.data(),
-            release_arrow_array_pycapsule
-        );
-        if (capsule_ptr == nullptr)
-        {
-            arrow_array_ptr->release(arrow_array_ptr);
-            delete arrow_array_ptr;
-            return nullptr;
-        }
-        return capsule_ptr;
-    }
-
-    ArrowArray* get_arrow_array_pycapsule(PyObject* capsule)
-    {
-        return static_cast<ArrowArray*>(PyCapsule_GetPointer(capsule, arrow_array_str.data()));
     }
 
     array import_array_from_capsules(PyObject* schema_capsule, PyObject* array_capsule)
     {
-        ArrowSchema* schema = get_arrow_schema_pycapsule(schema_capsule);
+        // Get the raw pointers from the capsules
+        ArrowSchema* schema = static_cast<ArrowSchema*>(
+            PyCapsule_GetPointer(schema_capsule, arrow_schema_str)
+        );
         if (schema == nullptr)
         {
             // Error already set by PyCapsule_GetPointer
             return array{};
         }
 
-        ArrowArray* arr = get_arrow_array_pycapsule(array_capsule);
+        ArrowArray* arr = static_cast<ArrowArray*>(
+            PyCapsule_GetPointer(array_capsule, arrow_array_str)
+        );
         if (arr == nullptr)
         {
             // Error already set by PyCapsule_GetPointer
@@ -118,8 +72,6 @@ namespace sparrow::pycapsule
         }
 
         // Move the data from the capsule structures
-        // The capsule destructors will still be called, but they will see
-        // that release is null and won't do anything
         ArrowSchema schema_moved = *schema;
         ArrowArray array_moved = *arr;
 
@@ -136,80 +88,44 @@ namespace sparrow::pycapsule
         auto [arrow_array, arrow_schema] = extract_arrow_structures(std::move(arr));
 
         // Allocate heap copies for the PyCapsules
-        ArrowSchema* schema_ptr = new ArrowSchema(std::move(arrow_schema));
-        ArrowArray* array_ptr = new ArrowArray(std::move(arrow_array));
-
-        // Check if Python is initialized before creating capsules
-        if (!Py_IsInitialized())
-        {
-            delete schema_ptr;
-            delete array_ptr;
-            throw std::runtime_error("Python is not initialized. Cannot create PyCapsules.");
-        }
+        auto* schema_ptr = new ArrowSchema(arrow_schema);
+        auto* array_ptr = new ArrowArray(arrow_array);
 
         PyObject* schema_capsule = PyCapsule_New(
             schema_ptr,
-            arrow_schema_str.data(),
+            arrow_schema_str,
             release_arrow_schema_pycapsule
         );
 
-        if (!schema_capsule)
+        if (schema_capsule == nullptr)
         {
-            // Check for Python error
-            if (PyErr_Occurred())
+            if (schema_ptr->release != nullptr)
             {
-                PyObject *type, *value, *traceback;
-                PyErr_Fetch(&type, &value, &traceback);
-                
-                PyObject* str_value = PyObject_Str(value);
-                const char* error_msg = str_value ? PyUnicode_AsUTF8(str_value) : "Unknown error";
-                
-                std::string error_str = std::string("PyCapsule_New failed for schema: ") + error_msg;
-                
-                Py_XDECREF(str_value);
-                Py_XDECREF(type);
-                Py_XDECREF(value);
-                Py_XDECREF(traceback);
-                
-                delete schema_ptr;
-                delete array_ptr;
-                throw std::runtime_error(error_str);
+                schema_ptr->release(schema_ptr);
             }
             delete schema_ptr;
+            if (array_ptr->release != nullptr)
+            {
+                array_ptr->release(array_ptr);
+            }
             delete array_ptr;
             return {nullptr, nullptr};
         }
 
         PyObject* array_capsule = PyCapsule_New(
             array_ptr,
-            arrow_array_str.data(),
+            arrow_array_str,
             release_arrow_array_pycapsule
         );
-        
-        if (!array_capsule)
+
+        if (array_capsule == nullptr)
         {
-            // Check for Python error
-            if (PyErr_Occurred())
+            Py_DECREF(schema_capsule);
+            if (array_ptr->release != nullptr)
             {
-                PyObject *type, *value, *traceback;
-                PyErr_Fetch(&type, &value, &traceback);
-                
-                PyObject* str_value = PyObject_Str(value);
-                const char* error_msg = str_value ? PyUnicode_AsUTF8(str_value) : "Unknown error";
-                
-                std::string error_str = std::string("PyCapsule_New failed for array: ") + error_msg;
-                
-                Py_XDECREF(str_value);
-                Py_XDECREF(type);
-                Py_XDECREF(value);
-                Py_XDECREF(traceback);
-                
-                delete array_ptr;
-                Py_DECREF(schema_capsule);
-                throw std::runtime_error(error_str);
+                array_ptr->release(array_ptr);
             }
             delete array_ptr;
-            Py_DECREF(schema_capsule);
             return {nullptr, nullptr};
         }
 

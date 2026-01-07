@@ -8,6 +8,8 @@ dependencies:
   # Dependencies
   - sparrow-devel
   - python
+  - nanobind
+  - nanobind-abi
   # Tests
   - doctest
   - polars

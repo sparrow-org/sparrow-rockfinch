@@ -56,6 +56,7 @@ jobs:
         run: cmake --build . --target run_sparrow_tests_direct
 
       - name: Install
+        if: matrix.build_shared == 'ON'
         working-directory: build
         run: cmake --install .
 
@@ -68,6 +69,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Python test dependencies
+        run: pip install pytest polars pyarrow
 
       - name: Configure using cmake
         run: |
@@ -90,6 +99,12 @@ jobs:
         working-directory: build
         run: cmake --build . --target run_tests_with_junit_report
 
+      - name: Run sparrow integration tests
+        if: matrix.build_shared == 'ON'
+        working-directory: build
+        run: cmake --build . --target run_sparrow_tests_direct
+
       - name: Install
+        if: matrix.build_shared == 'ON'
         working-directory: build
         run: sudo cmake --install .

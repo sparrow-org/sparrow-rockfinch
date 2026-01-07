@@ -174,8 +174,8 @@ add_library(sparrow-pycapsule ${SPARROW_PYCAPSULE_LIBRARY_TYPE} ${SPARROW_PYCAPS
 
 target_link_libraries(sparrow-pycapsule
     PUBLIC 
-        Python::Python
-        sparrow::sparrow)
+        sparrow::sparrow
+        Python::Python)
 
 target_compile_definitions(sparrow-pycapsule PUBLIC ${SPARROW_PYCAPSULE_COMPILE_DEFINITIONS})
 
@@ -244,6 +244,43 @@ endif()
 # ====
 if(BUILD_DOCS)
     add_subdirectory(docs)
+endif()
+
+# Python module
+# =============
+option(SPARROW_PYCAPSULE_BUILD_PYTHON_MODULE "Build the sparrow Python module" ON)
+message(STATUS "🔧 Build Python module: ${SPARROW_PYCAPSULE_BUILD_PYTHON_MODULE}")
+
+if(SPARROW_PYCAPSULE_BUILD_PYTHON_MODULE)
+    nanobind_add_module(sparrow_rockfinch src/sparrow_module.cpp)
+    target_link_libraries(sparrow_rockfinch PRIVATE sparrow-pycapsule sparrow::sparrow)
+    target_compile_features(sparrow_rockfinch PRIVATE cxx_std_20)
+    # Define the module name macro to match the output filename (includes debug suffix)
+    target_compile_definitions(sparrow_rockfinch PRIVATE
+        SPARROW_MODULE_NAME=$<TARGET_FILE_BASE_NAME:sparrow_rockfinch>
+    )
+    set_target_properties(sparrow_rockfinch PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${BINARY_BUILD_DIR}
+        # Set RPATH so the module can find libsparrow-pycapsule at runtime
+        BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-pycapsule>"
+        BUILD_RPATH_USE_ORIGIN ON
+        MACOSX_RPATH ON
+        INSTALL_RPATH "@loader_path"
+    )
+
+    # Install Python module (for pip install / wheel building)
+    install(TARGETS sparrow_rockfinch
+        LIBRARY DESTINATION sparrow_rockfinch
+        RUNTIME DESTINATION sparrow_rockfinch
+    )
+    # Install __init__.py for the package
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/sparrow_rockfinch/__init__.py
+        DESTINATION sparrow_rockfinch
+    )
+    # Install py.typed marker for type hints
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/sparrow_rockfinch/py.typed
+        DESTINATION sparrow_rockfinch
+    )
 endif()
 
 # Tests

@@ -11,6 +11,8 @@ import sys
 import os
 from pathlib import Path
 from typing import Any, Protocol, Tuple
+import importlib.util
+
 
 class ArrowArrayExportable(Protocol):
     """Protocol for objects implementing the Arrow PyCapsule Interface."""
@@ -34,19 +36,65 @@ class SparrowArrayType(ArrowArrayExportable, Protocol):
     def size(self) -> int:
         """Get the number of elements in the array."""
         ...
+    
+    @classmethod
+    def from_arrow(cls, arrow_array: ArrowArrayExportable) -> "SparrowArrayType":
+        """Create a SparrowArray from an Arrow-compatible object."""
+        ...
 
 
-def _setup_module_path() -> None:
-    """Add the build directory to Python path so we can import test_sparrow_helper."""
-    # Check for environment variable first
-    helper_path = os.environ.get('TEST_SPARROW_HELPER_PATH')
+def _get_module_name_from_path(file_path: Path) -> str:
+    """Extract the module name from a .so/.pyd file path.
+    
+    Handles various naming patterns:
+    - Linux: 'sparrow_rockfinchd.cpython-312-x86_64-linux-gnu.so' -> 'sparrow_rockfinchd'
+    - Windows: 'sparrow_rockfinch.cp314-win_amd64.pyd' -> 'sparrow_rockfinch'
+    - Simple: 'module.so' or 'module.pyd' -> 'module'
+    """
+    name = file_path.name
+    # The module name is always the part before the first dot
+    # This handles all patterns: name.cpython-..., name.cp314-..., name.so, name.pyd
+    if '.' in name:
+        name = name.split('.')[0]
+    return name
+
+
+def _load_module_from_path(module_name: str, file_path: Path):
+    """Load a Python extension module from a file path.
+    
+    The module_name should match the PyInit_<name> function in the compiled module.
+    """
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    if spec and spec.loader:
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+    raise ImportError(f"Could not load {module_name} from {file_path}")
+
+
+def _setup_modules() -> None:
+    """Set up the sparrow_rockfinch and test_sparrow_helper modules."""
+    # Load the main sparrow_rockfinch module
+    sparrow_path = os.environ.get('SPARROW_MODULE_PATH')
+    if sparrow_path:
+        sparrow_file = Path(sparrow_path)
+        if sparrow_file.exists():
+            # Use actual module name from file (handles debug 'd' suffix)
+            module_name = _get_module_name_from_path(sparrow_file)
+            _load_module_from_path(module_name, sparrow_file)
+
+    # Load the test helper module
+    helper_path = os.environ.get('TEST_SPARROW_HELPER_LIB_PATH')
     if helper_path:
-        module_dir = Path(helper_path).parent
-        if module_dir.exists():
-            sys.path.insert(0, str(module_dir))
+        helper_file = Path(helper_path)
+        if helper_file.exists():
+            # Use actual module name from file (handles debug 'd' suffix)
+            module_name = _get_module_name_from_path(helper_file)
+            _load_module_from_path(module_name, helper_file)
             return
-
-    # Try to find in build directory
+    
+    # Fallback: try to find modules in build directory
     test_dir = Path(__file__).parent
     build_dirs = [
         test_dir.parent / "build" / "bin" / "Debug",
@@ -60,13 +108,16 @@ def _setup_module_path() -> None:
             return
 
     raise ImportError(
-        "Could not find test_sparrow_helper module. "
-        "Build the project first or set TEST_SPARROW_HELPER_PATH."
+        "Could not find sparrow_rockfinch or test_sparrow_helper module. "
+        "Build the project first or set SPARROW_MODULE_PATH and TEST_SPARROW_HELPER_LIB_PATH."
     )
 
 
-# Set up module path and import the C++ module
-_setup_module_path()
+# Set up modules
+_setup_modules()
 
-# Import the native Python extension module that provides SparrowArray
-from test_sparrow_helper import SparrowArray  # noqa: E402
+# Import from the sparrow_rockfinch module (try release first, then debug)
+try:
+    from sparrow_rockfinch import SparrowArray  # noqa: E402
+except ImportError:
+    from sparrow_rockfinchd import SparrowArray  # noqa: E402

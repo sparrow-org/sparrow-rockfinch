@@ -64,4 +64,29 @@ if(SPARROW_PYCAPSULE_BUILD_TESTS)
     )
 endif()
 
-find_package(Python REQUIRED COMPONENTS Development)
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
+
+execute_process(
+    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE nanobind_ROOT
+    RESULT_VARIABLE nanobind_query_result
+    ERROR_VARIABLE nanobind_query_error
+)
+
+if(NOT nanobind_query_result STREQUAL "0" OR nanobind_ROOT STREQUAL "")
+    message(WARNING
+        "Failed to detect nanobind CMake directory via 'python -m nanobind --cmake_dir' "
+        "(result='${nanobind_query_result}', error='${nanobind_query_error}'). "
+        "Continuing without nanobind_ROOT; CMake will rely on standard find_package/fetch.")
+    unset(nanobind_ROOT)
+endif()
+find_package_or_fetch(
+    PACKAGE_NAME nanobind
+    GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+    TAG v2.9.2
+)
+
+if(TARGET nanobind)
+    nanobind_build_library(nanobind-static)
+endif()

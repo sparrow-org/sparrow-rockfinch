@@ -26,8 +26,11 @@ from sparrow_helpers import (
     SparrowArrayType,
 )
 
-# Import the C++ module for create_test_array
-import test_sparrow_helper  # noqa: E402
+# Import the C++ module for create_test_array (try release first, then debug)
+try:
+    import test_sparrow_helper  # noqa: E402
+except ImportError:
+    import test_sparrow_helperd as test_sparrow_helper  # noqa: E402
 
 
 def arrow_array_to_series(
@@ -86,10 +89,11 @@ class TestSparrowToPolars:
             f"Expected type 'SparrowArray', got '{type_name}'"
         )
 
-        # Check the module-qualified name
+        # Check the module-qualified name (allow debug 'd' suffix)
         full_name = f"{type(sparrow_array).__module__}.{type_name}"
-        assert full_name == "sparrow.SparrowArray", (
-            f"Expected 'sparrow.SparrowArray', got '{full_name}'"
+        valid_names = ("sparrow_rockfinch.SparrowArray", "sparrow_rockfinchd.SparrowArray")
+        assert full_name in valid_names, (
+            f"Expected one of {valid_names}, got '{full_name}'"
         )
 
     def test_sparrow_to_polars_series(self):
@@ -125,12 +129,12 @@ class TestPyArrowToSparrow:
     """Test creating an array in PyArrow and importing to sparrow."""
 
     def test_create_sparrow_array_from_pyarrow(self):
-        """Create a SparrowArray directly from a PyArrow array using the constructor."""
+        """Create a SparrowArray directly from a PyArrow array using from_arrow()."""
         # Create a PyArrow array
         pa_array = pa.array([100, 200, None, 400, 500], type=pa.int32())
 
-        # Create SparrowArray directly using the type constructor
-        sparrow_array = SparrowArray(pa_array)
+        # Create SparrowArray using the factory method
+        sparrow_array = SparrowArray.from_arrow(pa_array)
 
         # Verify it's a SparrowArray
         assert type(sparrow_array).__name__ == "SparrowArray"
@@ -148,7 +152,7 @@ class TestPyArrowToSparrow:
 
         # Verify sparrow can import and read the data via __arrow_c_array__
 
-        sparrow_array: SparrowArrayType = SparrowArray(pa_array)
+        sparrow_array: SparrowArrayType = SparrowArray.from_arrow(pa_array)
         assert sparrow_array.size() == 5
 
     def test_pyarrow_roundtrip_through_sparrow(self):
@@ -157,7 +161,7 @@ class TestPyArrowToSparrow:
         pa_array = pa.array([1, 2, None, 4, 5], type=pa.int32())
 
         # Round-trip through sparrow (import then export as SparrowArray)
-        sparrow_array = SparrowArray(pa_array)
+        sparrow_array = SparrowArray.from_arrow(pa_array)
 
         # Import the result into Polars
         result_series = arrow_array_to_series(sparrow_array)
@@ -175,7 +179,7 @@ class TestPyArrowToSparrow:
         pa_array = pa.array([None, 1, None, 3, None], type=pa.int32())
 
         # Round-trip through sparrow
-        sparrow_array = SparrowArray(pa_array)
+        sparrow_array = SparrowArray.from_arrow(pa_array)
 
         # Import into Polars
         result_series = arrow_array_to_series(sparrow_array)

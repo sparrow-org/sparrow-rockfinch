@@ -55,12 +55,13 @@ jobs:
         working-directory: build
         run: cmake --build . --target run_tests_with_junit_report
 
-      # - name: Run Sparrow integration tests
-      #   if: matrix.build_shared == 'ON'
-      #   working-directory: build
-      #   run: cmake --build . --target run_sparrow_tests_direct
+      - name: Run Sparrow integration tests
+        if: matrix.build_shared == 'ON'
+        working-directory: build
+        run: cmake --build . --target run_sparrow_tests_direct
 
       - name: Install
+        if: matrix.build_shared == 'ON'
         working-directory: build
         run: cmake --install .
 
@@ -79,6 +80,14 @@ jobs:
           sudo xcode-select --switch /Applications/Xcode_16.4.app/Contents/Developer
           xcodebuild -version
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Python test dependencies
+        run: pip install pytest polars pyarrow
+
       - name: Configure using cmake
         run: |
           cmake -G Ninja \
@@ -86,7 +95,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
           -DSPARROW_PYCAPSULE_BUILD_SHARED=${{ matrix.build_shared }} \
           -DSPARROW_PYCAPSULE_BUILD_TESTS=ON \
-          -DFETCH_DEPENDENCIES_WITH_CMAKE=MISSING
+          -DFETCH_DEPENDENCIES_WITH_CMAKE=MISSING \
+          -DPython_EXECUTABLE=$(which python3)
 
       - name: Build sparrow-pycapsule
         working-directory: build
@@ -100,6 +110,12 @@ jobs:
         working-directory: build
         run: cmake --build . --target run_tests_with_junit_report
 
+      - name: Run sparrow integration tests
+        if: matrix.build_shared == 'ON'
+        working-directory: build
+        run: cmake --build . --target run_sparrow_tests_direct
+
       - name: Install
+        if: matrix.build_shared == 'ON'
         working-directory: build
         run: sudo cmake --install .

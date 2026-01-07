@@ -21,7 +21,6 @@ target_link_libraries(${test_target}
     sparrow-pycapsule
     sparrow::sparrow
     doctest::doctest
-    Python::Python
 )
 
 if(MSVC)
@@ -85,7 +84,7 @@ add_custom_target(run_tests_with_junit_report
 
 set_target_properties(run_tests_with_junit_report PROPERTIES FOLDER "Tests utilities")
 
-Python_add_library(test_sparrow_helper MODULE test_sparrow_helper_module.cpp)
+nanobind_add_module(test_sparrow_helper test_sparrow_helper_module.cpp)
 
 target_link_libraries(test_sparrow_helper
     PRIVATE
@@ -95,17 +94,18 @@ target_link_libraries(test_sparrow_helper
 
 target_compile_features(test_sparrow_helper PRIVATE cxx_std_20)
 
-if(MSVC)
-    target_compile_options(test_sparrow_helper PRIVATE /W4)
-else()
-    target_compile_options(test_sparrow_helper PRIVATE -Wall -Wextra -Wpedantic)
-endif()
-
+# Define the module name macro to match the output filename (includes debug suffix)
+target_compile_definitions(test_sparrow_helper PRIVATE
+    TEST_SPARROW_HELPER_MODULE_NAME=$<TARGET_FILE_BASE_NAME:test_sparrow_helper>
+)
 set_target_properties(test_sparrow_helper PROPERTIES
     FOLDER tests
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}
-    # Python modules must not have a debug suffix - Python won't find them
-    DEBUG_POSTFIX ""
+    # Set RPATH so the module can find libsparrow-pycapsule at runtime
+    BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-pycapsule>"
+    BUILD_RPATH_USE_ORIGIN ON
+    MACOSX_RPATH ON
+    INSTALL_RPATH "@loader_path"
 )
 
 # Python integration test
@@ -121,11 +121,9 @@ if(Python_Interpreter_FOUND)
     )
     
     # Set environment variables so Python can find the libraries
-    # Use generator expressions to get the actual library paths from targets
     set_tests_properties(test_sparrow_integration PROPERTIES
-        ENVIRONMENT "TEST_SPARROW_HELPER_LIB_PATH=$<TARGET_FILE:test_sparrow_helper>;SPARROW_PYCAPSULE_LIB_PATH=$<TARGET_FILE:sparrow-pycapsule>"
+        ENVIRONMENT "SPARROW_MODULE_PATH=$<TARGET_FILE:sparrow_rockfinch>;TEST_SPARROW_HELPER_LIB_PATH=$<TARGET_FILE:test_sparrow_helper>"
         TIMEOUT 300
-        DEPENDS test_sparrow_helper
     )
     
     message(STATUS "Added sparrow integration test (Python ${Python_VERSION})")
@@ -134,6 +132,9 @@ else()
 endif()
 
 if(Python_Interpreter_FOUND)
+    # Get the directory containing the sparrow-pycapsule library for runtime
+    set(SPARROW_LIB_DIR "$<TARGET_FILE_DIR:sparrow-pycapsule>")
+    
     add_custom_target(run_sparrow_tests_direct
         COMMAND ${CMAKE_COMMAND} -E echo "=================================="
         COMMAND ${CMAKE_COMMAND} -E echo "Sparrow Integration Test Runner"
@@ -144,17 +145,24 @@ if(Python_Interpreter_FOUND)
         COMMAND ${Python_EXECUTABLE} -c "import pyarrow" || ${CMAKE_COMMAND} -E cmake_echo_color --red "ERROR: pyarrow not installed. Install with: pip install pyarrow"
         COMMAND ${CMAKE_COMMAND} -E echo ""
         COMMAND ${CMAKE_COMMAND} -E echo "Library paths:"
+        COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_MODULE_PATH=$<TARGET_FILE:sparrow_rockfinch>"
         COMMAND ${CMAKE_COMMAND} -E echo "  TEST_SPARROW_HELPER_LIB_PATH=$<TARGET_FILE:test_sparrow_helper>"
-        COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_PYCAPSULE_LIB_PATH=$<TARGET_FILE:sparrow-pycapsule>"
+        COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_LIB_DIR=${SPARROW_LIB_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E echo "  SPARROW_PYCAPSULE_LIB=$<TARGET_FILE:sparrow-pycapsule>"
+        COMMAND ${CMAKE_COMMAND} -E echo ""
+        COMMAND ${CMAKE_COMMAND} -E echo "Checking library exists..."
+        COMMAND ls -la ${SPARROW_LIB_DIR}
         COMMAND ${CMAKE_COMMAND} -E echo ""
         COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
         COMMAND ${CMAKE_COMMAND} -E echo ""
         COMMAND ${CMAKE_COMMAND} -E env 
+            "SPARROW_MODULE_PATH=$<TARGET_FILE:sparrow_rockfinch>"
             "TEST_SPARROW_HELPER_LIB_PATH=$<TARGET_FILE:test_sparrow_helper>"
-            "SPARROW_PYCAPSULE_LIB_PATH=$<TARGET_FILE:sparrow-pycapsule>"
+            "LD_LIBRARY_PATH=${SPARROW_LIB_DIR}:$ENV{LD_LIBRARY_PATH}"
+            "DYLD_LIBRARY_PATH=${SPARROW_LIB_DIR}:$ENV{DYLD_LIBRARY_PATH}"
             ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_sparrow_integration.py
         COMMAND ${CMAKE_COMMAND} -E echo ""
-        DEPENDS test_sparrow_helper sparrow-pycapsule
+        DEPENDS test_sparrow_helper sparrow_rockfinch sparrow-pycapsule
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Running Sparrow integration tests directly"
         USES_TERMINAL
