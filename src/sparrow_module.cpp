@@ -98,6 +98,6 @@ NB_MODULE(sparrow_rockfinch, m)
               "This module provides the SparrowArray class which implements the\n"
               "Arrow PyCapsule Interface for zero-copy data exchange with other\n"
               "Arrow-compatible libraries like Polars and PyArrow.";
-    m.attr("__version__") = sparrow::rockfinch::SPARROW_ROCKFINCH_VERSION_STRING;
+    m.attr("__version__") = sparrow::rockfinch::SPARROW_ROCKFINCH_VERSION_STRING.c_str();
     sparrow::rockfinch::register_sparrow_array(m);
 }

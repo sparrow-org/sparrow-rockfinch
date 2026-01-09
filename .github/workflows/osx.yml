@@ -49,7 +49,7 @@ jobs:
 
       - name: Build tests
         working-directory: build
-        run: cmake --build . --target test_sparrow_ROCKFINCH_lib
+        run: cmake --build . --target test_sparrow_rockfinch_lib
 
       - name: Run tests
         working-directory: build
@@ -104,7 +104,7 @@ jobs:
 
       - name: Build tests
         working-directory: build
-        run: cmake --build . --target test_sparrow_ROCKFINCH_lib
+        run: cmake --build . --target test_sparrow_rockfinch_lib
 
       - name: Run tests
         working-directory: build

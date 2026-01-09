@@ -48,7 +48,7 @@ jobs:
 
       - name: Build tests
         working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_ROCKFINCH_lib
+        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_rockfinch_lib
 
       - name: Run tests
         working-directory: build
@@ -88,7 +88,7 @@ jobs:
 
       - name: Build tests
         working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_ROCKFINCH_lib
+        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_rockfinch_lib
 
       - name: Run tests
         working-directory: build

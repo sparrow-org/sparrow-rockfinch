@@ -82,15 +82,17 @@ depends-on = [
 ]
 
 [tasks]
-# start = "python -c 'import importlib.util; print(importlib.util.find_spec('sparrow_rockfinch'))'"
-start = "python -c 'import sparrow_rockfinch; print(sparrow_rockfinch.__doc__)'"
-# start = "python -c 'import sparrow_rockfinch; import inspect; print([name for name, obj in inspect.getmembers(sparrow_rockfinch, inspect.isclass)])'" 
+start = "python -c 'import sparrow_rockfinch; import inspect; print([name for name, obj in inspect.getmembers(sparrow_rockfinch, inspect.isclass)])'" 
 
 [feature.test.tasks.test_python]
 cmd = "cmake --build .build --target run_sparrow_tests_direct"
 depends-on = [
   { task = "configure", environment = "dev" }
 ]
+
+[feature.test.tasks.test_integration]
+cmd = "pytest test/test_package_integration.py"
+description = "Run integration tests"
 
 [feature.test.tasks.all_tests]
 depends-on = ["test_cpp", "test_python"]
@@ -101,44 +103,9 @@ pytest = ">=7.0"
 polars = ">=0.20"
 pyarrow = ">=14.0"
 doctest = ">=2.4"
-sparrow-devel = ">=2.0.0"
 nanobind = "2.4.*"
-
-[feature.package-test.tasks.build_package]
-cmd = "mkdir -p dist && pixi build --output-dir dist"
-description = "Build the conda package"
-
-[feature.package-test.tasks.create_test_env]
-cmd = "micromamba create -n env_name python=3.11 -y"
-description = "Create a test environment with micromamba"
-
-[feature.package-test.tasks.install_package]
-cmd = "micromamba install -y -n env_name ./dist/sparrow_rockfinch-0.1.0-py311he8c1319_0.conda pytest polars pyarrow -c conda-forge"
-depends-on = ["build_package", "create_test_env"]
-description = "Install the built conda package with micromamba"
-
-[feature.package-test.tasks.test_package]
-description = "Run integration tests using the micromamba environment"
-cmd = "micromamba run -n env_name python -m pytest ./test/test_package_integration.py"
-depends-on = ["install_package"]
-
-[feature.package-test.tasks.test_import]
-cmd = "micromamba run -n env_name python -c \"import sparrow_rockfinch; print('Successfully imported sparrow_rockfinch')\""
-depends-on = ["install_package"]
-description = "Quick import test of the installed package"
-
-[feature.package-test.tasks.package_tests]
-depends-on = ["test_import", "test_package"]
-description = "Run all package tests (import + integration tests)"
-
-[feature.package-test.dependencies]
-python = "3.11.*"
-pytest = ">=7.0"
-polars = ">=0.20"
-pyarrow = ">=14.0"
-micromamba = ">=2.4"
 
 [environments]
 default = { features = [], solve-group = "default" }
 dev = { features = ["test"], solve-group = "default" }
-package-test = { features = ["package-test"], solve-group = "package-test" }
+package-test = { features = ["test"], solve-group = "package-test" }
