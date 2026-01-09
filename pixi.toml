@@ -113,6 +113,7 @@ polars = ">=0.20"
 pyarrow = ">=14.0"
 doctest = ">=2.4"
 nanobind = "2.4.*"
+sparrow-devel = ">=2.0.0"
 
 [environments]
 default = { features = [], solve-group = "default" }
