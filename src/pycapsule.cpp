@@ -3,7 +3,7 @@
 #include <sparrow/array.hpp>
 #include <sparrow/c_interface.hpp>
 
-namespace sparrow::pycapsule
+namespace sparrow::rockfinch
 {
     namespace
     {

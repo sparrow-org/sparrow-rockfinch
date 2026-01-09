@@ -1,6 +1,8 @@
 #pragma once
 
-namespace sparrow
+#include <string>
+
+namespace sparrow::rockfinch
 {
     constexpr int SPARROW_ROCKFINCH_VERSION_MAJOR = 0;
     constexpr int SPARROW_ROCKFINCH_VERSION_MINOR = 1;
@@ -9,6 +11,14 @@ namespace sparrow
     constexpr int SPARROW_ROCKFINCH_BINARY_CURRENT = 1;
     constexpr int SPARROW_ROCKFINCH_BINARY_REVISION = 0;
     constexpr int SPARROW_ROCKFINCH_BINARY_AGE = 0;
+
+
+    // Generate version string
+    static const std::string SPARROW_ROCKFINCH_VERSION_STRING = std::to_string(SPARROW_ROCKFINCH_VERSION_MAJOR)
+                                                                + "."
+                                                                + std::to_string(SPARROW_ROCKFINCH_VERSION_MINOR)
+                                                                + "."
+                                                                + std::to_string(SPARROW_ROCKFINCH_VERSION_PATCH);
 
     static_assert(
         SPARROW_ROCKFINCH_BINARY_AGE <= SPARROW_ROCKFINCH_BINARY_CURRENT,

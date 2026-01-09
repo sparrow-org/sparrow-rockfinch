@@ -170,16 +170,17 @@ else()
     list(APPEND SPARROW_ROCKFINCH_COMPILE_DEFINITIONS SPARROW_ROCKFINCH_STATIC_LIB)
 endif()
 
-add_library(sparrow-rockfinch ${SPARROW_ROCKFINCH_LIBRARY_TYPE} ${SPARROW_ROCKFINCH_HEADERS} ${SPARROW_ROCKFINCH_SOURCES})
+add_library(sparrow-rockfinch-cpp ${SPARROW_ROCKFINCH_LIBRARY_TYPE} ${SPARROW_ROCKFINCH_HEADERS} ${SPARROW_ROCKFINCH_SOURCES})
 
-target_link_libraries(sparrow-rockfinch
+target_link_libraries(sparrow-rockfinch-cpp
     PUBLIC 
         sparrow::sparrow
         Python::Python)
 
-target_compile_definitions(sparrow-rockfinch PUBLIC ${SPARROW_ROCKFINCH_COMPILE_DEFINITIONS})
+set_target_properties(sparrow-rockfinch-cpp PROPERTIES
+    POSITION_INDEPENDENT_CODE ON)
 
-set_property(TARGET sparrow-rockfinch PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(sparrow-rockfinch-cpp PUBLIC ${SPARROW_ROCKFINCH_COMPILE_DEFINITIONS})
 
 if(UNIX)
     # CMake does not compute the version number of so files as libtool
@@ -189,12 +190,12 @@ if(UNIX)
     # libtool pattern everywhere.
     math(EXPR SPARROW_ROCKFINCH_BINARY_COMPATIBLE "${SPARROW_ROCKFINCH_BINARY_CURRENT} - ${SPARROW_ROCKFINCH_BINARY_AGE}")
     set_target_properties(
-        sparrow-rockfinch
+        sparrow-rockfinch-cpp
         PROPERTIES
         VERSION "${SPARROW_ROCKFINCH_BINARY_COMPATIBLE}.${SPARROW_ROCKFINCH_BINARY_REVISION}.${SPARROW_ROCKFINCH_BINARY_AGE}"
         SOVERSION ${SPARROW_ROCKFINCH_BINARY_COMPATIBLE}
     )
-    target_compile_options(sparrow-rockfinch PRIVATE "-fvisibility=hidden")
+    target_compile_options(sparrow-rockfinch-cpp PRIVATE "-fvisibility=hidden")
 else()
     set_target_properties(
         sparrow-rockfinch
@@ -205,13 +206,13 @@ else()
     target_compile_definitions(sparrow-rockfinch PRIVATE SPARROW_ROCKFINCH_EXPORTS)
 endif()
 
-target_include_directories(sparrow-rockfinch PUBLIC
+target_include_directories(sparrow-rockfinch-cpp PUBLIC
     $<BUILD_INTERFACE:${SPARROW_ROCKFINCH_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:include>)
 
 # We do not use non-standard C++
-set_target_properties(sparrow-rockfinch PROPERTIES CMAKE_CXX_EXTENSIONS OFF)
-target_compile_features(sparrow-rockfinch PUBLIC cxx_std_20)
+set_target_properties(sparrow-rockfinch-cpp PROPERTIES CMAKE_CXX_EXTENSIONS OFF)
+target_compile_features(sparrow-rockfinch-cpp PUBLIC cxx_std_20)
 
 if(ENABLE_COVERAGE)
     enable_coverage(sparrow-rockfinch)
@@ -225,16 +226,16 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if (EMSCRIPTEN)
-        target_compile_options(sparrow-rockfinch
+        target_compile_options(sparrow-rockfinch-cpp
         PRIVATE
         -fPIC)
     else ()
-        target_compile_options(sparrow-rockfinch
+        target_compile_options(sparrow-rockfinch-cpp
         PUBLIC
         -Wno-c99-extensions)
     endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(sparrow-rockfinch
+    target_compile_options(sparrow-rockfinch-cpp
         PUBLIC
             /bigobj
     )
@@ -253,34 +254,42 @@ message(STATUS "🔧 Build Python module: ${SPARROW_ROCKFINCH_BUILD_PYTHON_MODUL
 
 if(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE)
     nanobind_add_module(sparrow_rockfinch src/sparrow_module.cpp)
-    target_link_libraries(sparrow_rockfinch PRIVATE sparrow-rockfinch sparrow::sparrow)
+    target_link_libraries(sparrow_rockfinch PRIVATE sparrow-rockfinch-cpp sparrow::sparrow)
     target_compile_features(sparrow_rockfinch PRIVATE cxx_std_20)
     # Define the module name macro to match the output filename (includes debug suffix)
     target_compile_definitions(sparrow_rockfinch PRIVATE
-        SPARROW_MODULE_NAME=$<TARGET_FILE_BASE_NAME:sparrow_rockfinch>
+        SPARROW_MODULE_NAME=sparrow_rockfinch
     )
     set_target_properties(sparrow_rockfinch PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${BINARY_BUILD_DIR}
         # Set RPATH so the module can find libsparrow-rockfinch at runtime
-        BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-rockfinch>"
+        BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-rockfinch-cpp>"
         BUILD_RPATH_USE_ORIGIN ON
         MACOSX_RPATH ON
         INSTALL_RPATH "@loader_path"
     )
 
-    # Install Python module (for pip install / wheel building)
-    install(TARGETS sparrow_rockfinch
-        LIBRARY DESTINATION sparrow_rockfinch
-        RUNTIME DESTINATION sparrow_rockfinch
+    install( 
+        TARGETS sparrow_rockfinch
+        EXPORT sparrow_rockfinchTargets
+        LIBRARY DESTINATION ${Python_SITEARCH}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${BINDIR}
     )
-    # Install __init__.py for the package
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/sparrow_rockfinch/__init__.py
-        DESTINATION sparrow_rockfinch
-    )
-    # Install py.typed marker for type hints
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/sparrow_rockfinch/py.typed
-        DESTINATION sparrow_rockfinch
-    )
+
+    # # Install Python module (for pip install / wheel building)
+    # install(TARGETS sparrow_rockfinch
+    #     LIBRARY DESTINATION ${Python_SITEARCH}/sparrow_rockfinch
+    #     RUNTIME DESTINATION ${Python_SITEARCH}/sparrow_rockfinch
+    # )
+    # # Install __init__.py for the package
+    # install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/sparrow_rockfinch/__init__.py
+    #     DESTINATION ${Python_SITEARCH}/sparrow_rockfinch
+    # )
+    # # Install py.typed marker for type hints
+    # install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/sparrow_rockfinch/py.typed
+    #     DESTINATION ${Python_SITEARCH}/sparrow_rockfinch
+    # )
 endif()
 
 # Tests
@@ -295,7 +304,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 # Install target
-set(SPARROW_ROCKFINCH_EXPORTED_TARGETS sparrow-rockfinch)
+set(SPARROW_ROCKFINCH_EXPORTED_TARGETS sparrow-rockfinch-cpp)
 
 install(TARGETS ${SPARROW_ROCKFINCH_EXPORTED_TARGETS}
     EXPORT ${PROJECT_NAME}-targets)
@@ -331,3 +340,4 @@ install(EXPORT ${PROJECT_NAME}-targets
     FILE ${PROJECT_NAME}Targets.cmake
     NAMESPACE sparrow::
     DESTINATION ${SPARROW_CMAKECONFIG_INSTALL_DIR})
+

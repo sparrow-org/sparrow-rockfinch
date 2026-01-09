@@ -3,7 +3,9 @@ authors = [
     "Alexis Placet <alexis.placet@quantstack.net>",
     "Johan Mabille <johan.mabille@quantstack.net>",
 ]
-name = "sparrow-rockfinch"
+name = "sparrow_rockfinch"
+homepage = "https://github.com/sparrow-org/sparrow-rockfinch"
+repository = "https://github.com/sparrow-org/sparrow-rockfinch"
 version = "0.1.0"
 description = "High-performance Arrow array library for Python with zero-copy data exchange"
 license = "Apache-2.0"
@@ -11,6 +13,7 @@ readme = "README.md"
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "linux-64", "osx-64", "win-64"]
 preview = ["pixi-build"]
+build-variants = { python = ["3.11.*"] }
 
 [package]
 name = "sparrow_rockfinch"
@@ -25,81 +28,117 @@ name = "pixi-build-cmake"
 version = "*"
 
 [dependencies]
-python = "*"
 sparrow_rockfinch = { path = "." }
-
-[package.build.config]
-extra-args = ["-DCMAKE_BUILD_TYPE=Release -DFETCH_DEPENDENCIES_WITH_CMAKE=OFF"]
 
 [package.build-dependencies]
 cmake = ">=4.0"
 ninja = ">=1.13"
 
 [package.host-dependencies]
+python = "*"  # Allow all variants
 nanobind = "2.4.*"
 sparrow = ">=2.0.0"
 sparrow-devel = ">=2.0.0"
 
-# [tasks.build]
-# cmd = ["cmake", "--build", ".build"]
-# depends-on = ["configure"]
-# inputs = ["CMakeLists.txt", "src/*"]
+[package.run-dependencies]
+python = "*"
+sparrow = ">=2.0.0"
 
-[feature.test.tasks.test_cpp]
-cmd = "ctest --test-dir .build --output-on-failure"
-depends-on = ["build"]
-inputs = ["CMakeLists.txt", "src/*"]
-
-[feature.test.tasks.test_python]
-cmd = "pytest test/test_sparrow_integration.py -v"
-depends-on = ["build"]
-inputs = ["CMakeLists.txt", "src/*"]
-
-[feature.test.tasks.test]
-depends-on = ["test_cpp", "test_python"]
-
-[feature.build.tasks.configure]
-# Configures CMake
+[tasks.build]
 cmd = [
-    "cmake",
-    # Use the cross-platform Ninja generator
-    "-GNinja",
-    # The source is in the root directory
-    "-S.",
-    # We wanna build in the .build directory
-    "-B.build",
+  "cmake",
+  "-GNinja",
+  "-S.",
+  "-B.build",
+  "-DCMAKE_BUILD_TYPE=Release",
+  "-DFETCH_DEPENDENCIES_WITH_CMAKE=OFF",
 ]
 
-inputs = ["CMakeLists.txt"]
-outputs = [".build/CMakeFiles/"]
+[tasks.clean]
+cmd = "rm -rf .build dist"
+description = "Remove build artifacts and conda packages"
 
-# Build the executable but make sure CMake is configured first.
-[feature.build.tasks.build]
-cmd = ["cmake", "--build", ".build"]
-depends-on = ["configure"]
-inputs = ["CMakeLists.txt", "src/*"]
+[feature.test.tasks.configure]
+cmd = [
+  "cmake",
+  "-GNinja",
+  "-S.",
+  "-B.build",
+  "-DCMAKE_BUILD_TYPE=Release",
+  "-DFETCH_DEPENDENCIES_WITH_CMAKE=OFF",
+  "-DSPARROW_ROCKFINCH_BUILD_TESTS=ON"
+]
+
+[feature.test.tasks.build]
+cmd = "cmake --build .build"
+depends-on = [
+  { task = "configure", environment = "dev" }
+]
+
+[feature.test.tasks.test_cpp]
+cmd = "cmake --build .build --target run_tests"
+depends-on = [
+  { task = "configure", environment = "dev" }
+]
+
+[tasks]
+# start = "python -c 'import importlib.util; print(importlib.util.find_spec('sparrow_rockfinch'))'"
+start = "python -c 'import sparrow_rockfinch; print(sparrow_rockfinch.__doc__)'"
+# start = "python -c 'import sparrow_rockfinch; import inspect; print([name for name, obj in inspect.getmembers(sparrow_rockfinch, inspect.isclass)])'" 
+
+[feature.test.tasks.test_python]
+cmd = "cmake --build .build --target run_sparrow_tests_direct"
+depends-on = [
+  { task = "configure", environment = "dev" }
+]
+
+[feature.test.tasks.all_tests]
+depends-on = ["test_cpp", "test_python"]
+description = "Run all C++ and Python tests"
 
 [feature.test.dependencies]
 pytest = ">=7.0"
 polars = ">=0.20"
 pyarrow = ">=14.0"
 doctest = ">=2.4"
+sparrow-devel = ">=2.0.0"
+nanobind = "2.4.*"
 
-[feature.dev.dependencies]
-clang-format = "*"
-clang-tools = "*"
-python-build = "*"
-twine = "*"
+[feature.package-test.tasks.build_package]
+cmd = "mkdir -p dist && pixi build --output-dir dist"
+description = "Build the conda package"
 
-[feature.dev.tasks]
-build-wheel = "unset CMAKE_ARGS && python -m build --wheel"
-build-sdist = "unset CMAKE_ARGS && python -m build --sdist"
+[feature.package-test.tasks.create_test_env]
+cmd = "micromamba create -n env_name python=3.11 -y"
+description = "Create a test environment with micromamba"
 
-[feature.docs.dependencies]
-doxygen = "*"
-sphinx = "*"
+[feature.package-test.tasks.install_package]
+cmd = "micromamba install -y -n env_name ./dist/sparrow_rockfinch-0.1.0-py311he8c1319_0.conda pytest polars pyarrow -c conda-forge"
+depends-on = ["build_package", "create_test_env"]
+description = "Install the built conda package with micromamba"
+
+[feature.package-test.tasks.test_package]
+description = "Run integration tests using the micromamba environment"
+cmd = "micromamba run -n env_name python -m pytest ./test/test_package_integration.py"
+depends-on = ["install_package"]
+
+[feature.package-test.tasks.test_import]
+cmd = "micromamba run -n env_name python -c \"import sparrow_rockfinch; print('Successfully imported sparrow_rockfinch')\""
+depends-on = ["install_package"]
+description = "Quick import test of the installed package"
+
+[feature.package-test.tasks.package_tests]
+depends-on = ["test_import", "test_package"]
+description = "Run all package tests (import + integration tests)"
+
+[feature.package-test.dependencies]
+python = "3.11.*"
+pytest = ">=7.0"
+polars = ">=0.20"
+pyarrow = ">=14.0"
+micromamba = ">=2.4"
 
 [environments]
-default = { features = ["build",], solve-group = "default" }
-dev = { features = ["build", "test", "dev"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "default" }
+default = { features = [], solve-group = "default" }
+dev = { features = ["test"], solve-group = "default" }
+package-test = { features = ["package-test"], solve-group = "package-test" }

@@ -152,7 +152,7 @@ n = sparrow_array.size()
 
 ```bash
 cd build
-./bin/Debug/test_sparrow_ROCKFINCH_lib
+./bin/Debug/test_sparrow_rockfinch_lib
 ```
 
 ### Integration Tests

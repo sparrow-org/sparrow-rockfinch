@@ -6,7 +6,7 @@
 
 #include "doctest/doctest.h"
 
-namespace sparrow::pycapsule
+namespace sparrow::rockfinch
 {
     // Helper function to create a simple test array
     sparrow::array make_test_array()

@@ -10,15 +10,6 @@ The C++ SparrowArray class implements the Arrow PyCapsule Interface (__arrow_c_a
 allowing direct integration with Polars without going through PyArrow.
 """
 
-import sys
-
-import pytest
-import polars as pl
-import pyarrow as pa
-from polars._plr import PySeries
-from polars._utils.wrap import wrap_s
-
-
 # Import helpers from our Python module
 from sparrow_helpers import (
     ArrowArrayExportable,
@@ -32,6 +23,13 @@ try:
 except ImportError:
     import test_sparrow_helperd as test_sparrow_helper  # noqa: E402
 
+import sys
+
+import pytest
+import polars as pl
+import pyarrow as pa
+from polars._plr import PySeries
+from polars._utils.wrap import wrap_s
 
 def arrow_array_to_series(
     arrow_array: ArrowArrayExportable, name: str = ""
