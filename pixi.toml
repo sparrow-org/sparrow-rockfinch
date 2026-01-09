@@ -13,7 +13,7 @@ readme = "README.md"
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "linux-64", "osx-64", "win-64"]
 preview = ["pixi-build"]
-build-variants = { python = ["3.11.*", "3.12.*", "3.13.*", "3.14.*"] }
+build-variants = { python = ["3.9.*", "3.10.*", "3.11.*", "3.12.*", "3.13.*", "3.14.*"] }
 
 [package]
 name = "sparrow_rockfinch"
@@ -21,6 +21,7 @@ version = "0.1.0"
 
 [dependencies]
 sparrow = ">=2.0.0"
+sparrow_rockfinch = { path = "." }
 
 [package.build.backend]
 channels = [
@@ -38,9 +39,11 @@ ninja = ">=1.13"
 python = "*"  # Allow all variants
 nanobind = "2.4.*"
 sparrow-devel = ">=2.0.0"
+sparrow = ">=2.0.0"
 
 [package.run-dependencies]
 python = "*"
+sparrow = ">=2.0.0"
 
 [tasks.configure]
 cmd = [
