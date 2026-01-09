@@ -24,13 +24,13 @@ jobs:
           cache: true
 
       - name: Build project
-        run: pixi run -e dev build
+        run: pixi build
 
       - name: Run C++ tests
-        run: pixi run -e dev test_cpp
+        run: pixi run test_cpp
 
       - name: Run Python tests
-        run: pixi run -e dev test_python
+        run: pixi run test_python
 
       - name: Run integration tests
-        run: pixi run -e dev test_integration
+        run: pixi run test_integration
