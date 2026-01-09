@@ -11,10 +11,11 @@
 
 #include <sparrow-rockfinch/pycapsule.hpp>
 #include <sparrow-rockfinch/sparrow_array_python_class.hpp>
+#include <sparrow-rockfinch/config/sparrow_rockfinch_version.hpp>
 
 namespace nb = nanobind;
 
-namespace sparrow::pycapsule
+namespace sparrow::rockfinch
 {
     /**
      * @brief Create a SparrowArray from an object implementing __arrow_c_array__.
@@ -65,7 +66,7 @@ namespace sparrow::pycapsule
             ">>> import pyarrow as pa\n"
             ">>> import sparrow_rockfinch as sp\n"
             ">>> pa_array = pa.array([1, 2, None, 4])\n"
-            ">>> sparrow_array = sparrow.SparrowArray.from_arrow(pa_array)")
+            ">>> sparrow_array = sp.SparrowArray.from_arrow(pa_array)")
             .def_static("from_arrow", &sparrow_array_from_arrow,
                 nb::arg("arrow_array"),
                 "Create a SparrowArray from an Arrow-compatible object.\n\n"
@@ -91,12 +92,12 @@ namespace sparrow::pycapsule
 
 }  // namespace sparrow::pycapsule
 
-NB_MODULE(SPARROW_MODULE_NAME, m)
+NB_MODULE(sparrow_rockfinch, m)
 {
     m.doc() = "Sparrow Rockfinch - High-performance Arrow array library for Python.\n\n"
               "This module provides the SparrowArray class which implements the\n"
               "Arrow PyCapsule Interface for zero-copy data exchange with other\n"
               "Arrow-compatible libraries like Polars and PyArrow.";
-
-    sparrow::pycapsule::register_sparrow_array(m);
+    m.attr("__version__") = sparrow::rockfinch::SPARROW_ROCKFINCH_VERSION_STRING.c_str();
+    sparrow::rockfinch::register_sparrow_array(m);
 }

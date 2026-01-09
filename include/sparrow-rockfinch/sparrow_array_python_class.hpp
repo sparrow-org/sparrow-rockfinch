@@ -8,7 +8,7 @@
 #include "sparrow-rockfinch/config/config.hpp"
 #include "sparrow-rockfinch/pycapsule.hpp"
 
-namespace sparrow::pycapsule
+namespace sparrow::rockfinch
 {
     /**
      * @brief C++ wrapper class for sparrow::array with Python interop.

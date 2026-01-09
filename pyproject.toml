@@ -1,0 +1,98 @@
+[build-system]
+requires = [
+    "scikit-build-core>=0.10",
+    "nanobind>=2.0",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "sparrow-rockfinch"
+version = "0.1.0"
+description = "High-performance Arrow array library for Python with zero-copy data exchange"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [
+    { name = "Alexis Placet", email = "alexis.placet@quantstack.net" },
+    { name = "Johan Mabille", email = "johan.mabille@quantstack.net" },
+]
+maintainers = [
+    { name = "Alexis Placet", email = "alexis.placet@quantstack.net" },
+    { name = "Johan Mabille", email = "johan.mabille@quantstack.net" },
+]
+keywords = [
+    "arrow",
+    "apache-arrow",
+    "pycapsule",
+    "zero-copy",
+    "data-exchange",
+    "sparrow",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "polars>=0.20",
+    "pyarrow>=14.0",
+]
+dev = [
+    "sparrow-rockfinch[test]",
+    "build",
+    "twine",
+]
+
+[project.urls]
+Homepage = "https://github.com/QuantStack/sparrow-rockfinch"
+Repository = "https://github.com/QuantStack/sparrow-rockfinch"
+Documentation = "https://github.com/QuantStack/sparrow-rockfinch#readme"
+Issues = "https://github.com/QuantStack/sparrow-rockfinch/issues"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["python/sparrow_rockfinch"]
+wheel.install-dir = "sparrow_rockfinch"
+cmake.build-type = "Release"
+
+[tool.scikit-build.cmake.define]
+SPARROW_ROCKFINCH_BUILD_TESTS = "OFF"
+SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE = "ON"
+SPARROW_ROCKFINCH_BUILD_SHARED = "OFF"
+FETCH_DEPENDENCIES_WITH_CMAKE = "ON"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = ["-v", "--tb=short"]
+
+[tool.cibuildwheel]
+build-verbosity = 1
+skip = ["*-musllinux_*", "pp*"]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "manylinux_2_28"
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]

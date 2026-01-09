@@ -1,0 +1,125 @@
+[workspace]
+authors = [
+    "Alexis Placet <alexis.placet@quantstack.net>",
+    "Johan Mabille <johan.mabille@quantstack.net>",
+]
+name = "sparrow_rockfinch"
+homepage = "https://github.com/sparrow-org/sparrow-rockfinch"
+repository = "https://github.com/sparrow-org/sparrow-rockfinch"
+version = "0.1.0"
+description = "High-performance Arrow array library for Python with zero-copy data exchange"
+license = "Apache-2.0"
+readme = "README.md"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64", "osx-64", "win-64"]
+preview = ["pixi-build"]
+
+[workspace.build-variants]
+python = ["3.9.*", "3.10.*", "3.11.*", "3.12.*", "3.13.*", "3.14.*"]
+
+[package]
+name = "sparrow_rockfinch"
+version = "0.1.0"
+
+[dependencies]
+sparrow = ">=2.0.0"
+sparrow_rockfinch = { path = "." }
+
+[package.build.backend]
+channels = [
+    "https://prefix.dev/pixi-build-backends",
+    "https://prefix.dev/conda-forge",
+]
+name = "pixi-build-cmake"
+version = "*"
+
+[package.build-dependencies]
+cmake = ">=4.0"
+ninja = ">=1.13"
+
+[package.host-dependencies]
+python = "*"  # Allow all variants
+nanobind = "2.4.*"
+sparrow-devel = ">=2.0.0"
+sparrow = ">=2.0.0"
+
+[package.run-dependencies]
+python = "*"
+sparrow = ">=2.0.0"
+
+[tasks.configure]
+cmd = [
+  "cmake",
+  "-GNinja",
+  "-S.",
+  "-B.build",
+  "-DCMAKE_BUILD_TYPE=Release",
+  "-DFETCH_DEPENDENCIES_WITH_CMAKE=OFF",
+]
+description = "Configure CMake build system"
+
+[tasks.build]
+cmd = "cmake --build .build"
+depends-on = ["configure"]
+description = "Build the project"
+
+[tasks.clean]
+cmd = "rm -rf .build dist"
+description = "Remove build artifacts and conda packages"
+
+[feature.test.tasks.configure]
+cmd = [
+  "cmake",
+  "-GNinja",
+  "-S.",
+  "-B.build",
+  "-DCMAKE_BUILD_TYPE=Release",
+  "-DFETCH_DEPENDENCIES_WITH_CMAKE=OFF",
+  "-DSPARROW_ROCKFINCH_BUILD_TESTS=ON"
+]
+description = "Configure CMake with tests enabled"
+
+[feature.test.tasks.build]
+cmd = "cmake --build .build"
+depends-on = [
+  { task = "configure", environment = "dev" }
+]
+description = "Build the project with tests"
+
+[feature.test.tasks.test_cpp]
+cmd = "cmake --build .build --target run_tests"
+depends-on = [
+  { task = "configure", environment = "dev" }
+]
+description = "Run C++ tests"
+
+[tasks.inspect-classes]
+cmd = "python -c 'import sparrow_rockfinch; import inspect; print([name for name, obj in inspect.getmembers(sparrow_rockfinch, inspect.isclass)])'"
+description = "List all classes in sparrow_rockfinch module" 
+
+[feature.test.tasks.test_python]
+cmd = "cmake --build .build --target run_sparrow_tests_direct"
+depends-on = [
+  { task = "configure", environment = "dev" }
+]
+description = "Run Python tests"
+
+[feature.test.tasks.test_integration]
+cmd = "pytest test/test_package_integration.py"
+description = "Run integration tests"
+
+[feature.test.tasks.all_tests]
+depends-on = ["test_cpp", "test_python"]
+description = "Run all C++ and Python tests"
+
+[feature.test.dependencies]
+pytest = ">=7.0"
+polars = ">=0.20"
+pyarrow = ">=14.0"
+doctest = ">=2.4"
+nanobind = "2.4.*"
+sparrow-devel = ">=2.0.0"
+
+[environments]
+default = { features = [], solve-group = "default" }
+dev = { features = ["test"], solve-group = "default" }

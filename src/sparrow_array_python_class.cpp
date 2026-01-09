@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace sparrow::pycapsule
+namespace sparrow::rockfinch
 {
     SparrowArray::SparrowArray(PyObject* schema_capsule, PyObject* array_capsule)
         : m_array(import_array_from_capsules(schema_capsule, array_capsule))
