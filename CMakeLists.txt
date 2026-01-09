@@ -198,12 +198,12 @@ if(UNIX)
     target_compile_options(sparrow-rockfinch-cpp PRIVATE "-fvisibility=hidden")
 else()
     set_target_properties(
-        sparrow-rockfinch
+        sparrow-rockfinch-cpp
         PROPERTIES
         VERSION ${SPARROW_ROCKFINCH_BINARY_VERSION}
         SOVERSION ${SPARROW_ROCKFINCH_BINARY_CURRENT}
     )
-    target_compile_definitions(sparrow-rockfinch PRIVATE SPARROW_ROCKFINCH_EXPORTS)
+    target_compile_definitions(sparrow-rockfinch-cpp PRIVATE SPARROW_ROCKFINCH_EXPORTS)
 endif()
 
 target_include_directories(sparrow-rockfinch-cpp PUBLIC
