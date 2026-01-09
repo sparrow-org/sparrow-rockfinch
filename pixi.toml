@@ -13,7 +13,9 @@ readme = "README.md"
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "linux-64", "osx-64", "win-64"]
 preview = ["pixi-build"]
-build-variants = { python = ["3.9.*", "3.10.*", "3.11.*", "3.12.*", "3.13.*", "3.14.*"] }
+
+[workspace.build-variants]
+python = ["3.9.*", "3.10.*", "3.11.*", "3.12.*", "3.13.*", "3.14.*"]
 
 [package]
 name = "sparrow_rockfinch"
