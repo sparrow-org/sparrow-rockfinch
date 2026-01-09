@@ -117,4 +117,3 @@ nanobind = "2.4.*"
 [environments]
 default = { features = [], solve-group = "default" }
 dev = { features = ["test"], solve-group = "default" }
-package-test = { features = ["test"], solve-group = "package-test" }
