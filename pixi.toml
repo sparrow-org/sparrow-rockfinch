@@ -19,6 +19,9 @@ build-variants = { python = ["3.11.*", "3.12.*", "3.13.*", "3.14.*"] }
 name = "sparrow_rockfinch"
 version = "0.1.0"
 
+[dependencies]
+sparrow = ">=2.0.0"
+
 [package.build.backend]
 channels = [
     "https://prefix.dev/pixi-build-backends",
@@ -34,12 +37,10 @@ ninja = ">=1.13"
 [package.host-dependencies]
 python = "*"  # Allow all variants
 nanobind = "2.4.*"
-sparrow = ">=2.0.0"
 sparrow-devel = ">=2.0.0"
 
 [package.run-dependencies]
 python = "*"
-sparrow = ">=2.0.0"
 
 [tasks.configure]
 cmd = [
