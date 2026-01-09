@@ -13,7 +13,7 @@ readme = "README.md"
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "linux-64", "osx-64", "win-64"]
 preview = ["pixi-build"]
-build-variants = { python = ["3.11.*"] }
+build-variants = { python = ["3.11.*", "3.12.*", "3.13.*", "3.14.*"] }
 
 [package]
 name = "sparrow_rockfinch"
@@ -26,9 +26,6 @@ channels = [
 ]
 name = "pixi-build-cmake"
 version = "*"
-
-[dependencies]
-sparrow_rockfinch = { path = "." }
 
 [package.build-dependencies]
 cmake = ">=4.0"
@@ -44,7 +41,7 @@ sparrow-devel = ">=2.0.0"
 python = "*"
 sparrow = ">=2.0.0"
 
-[tasks.build]
+[tasks.configure]
 cmd = [
   "cmake",
   "-GNinja",
@@ -53,6 +50,12 @@ cmd = [
   "-DCMAKE_BUILD_TYPE=Release",
   "-DFETCH_DEPENDENCIES_WITH_CMAKE=OFF",
 ]
+description = "Configure CMake build system"
+
+[tasks.build]
+cmd = "cmake --build .build"
+depends-on = ["configure"]
+description = "Build the project"
 
 [tasks.clean]
 cmd = "rm -rf .build dist"
@@ -68,27 +71,32 @@ cmd = [
   "-DFETCH_DEPENDENCIES_WITH_CMAKE=OFF",
   "-DSPARROW_ROCKFINCH_BUILD_TESTS=ON"
 ]
+description = "Configure CMake with tests enabled"
 
 [feature.test.tasks.build]
 cmd = "cmake --build .build"
 depends-on = [
   { task = "configure", environment = "dev" }
 ]
+description = "Build the project with tests"
 
 [feature.test.tasks.test_cpp]
 cmd = "cmake --build .build --target run_tests"
 depends-on = [
   { task = "configure", environment = "dev" }
 ]
+description = "Run C++ tests"
 
-[tasks]
-start = "python -c 'import sparrow_rockfinch; import inspect; print([name for name, obj in inspect.getmembers(sparrow_rockfinch, inspect.isclass)])'" 
+[tasks.inspect-classes]
+cmd = "python -c 'import sparrow_rockfinch; import inspect; print([name for name, obj in inspect.getmembers(sparrow_rockfinch, inspect.isclass)])'"
+description = "List all classes in sparrow_rockfinch module" 
 
 [feature.test.tasks.test_python]
 cmd = "cmake --build .build --target run_sparrow_tests_direct"
 depends-on = [
   { task = "configure", environment = "dev" }
 ]
+description = "Run Python tests"
 
 [feature.test.tasks.test_integration]
 cmd = "pytest test/test_package_integration.py"

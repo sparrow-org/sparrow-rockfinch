@@ -276,20 +276,6 @@ if(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE)
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${BINDIR}
     )
-
-    # # Install Python module (for pip install / wheel building)
-    # install(TARGETS sparrow_rockfinch
-    #     LIBRARY DESTINATION ${Python_SITEARCH}/sparrow_rockfinch
-    #     RUNTIME DESTINATION ${Python_SITEARCH}/sparrow_rockfinch
-    # )
-    # # Install __init__.py for the package
-    # install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/sparrow_rockfinch/__init__.py
-    #     DESTINATION ${Python_SITEARCH}/sparrow_rockfinch
-    # )
-    # # Install py.typed marker for type hints
-    # install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/sparrow_rockfinch/py.typed
-    #     DESTINATION ${Python_SITEARCH}/sparrow_rockfinch
-    # )
 endif()
 
 # Tests
