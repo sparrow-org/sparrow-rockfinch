@@ -2,6 +2,8 @@
 
 
 #define PY_SSIZE_T_CLEAN
+#include <utility>
+
 #include <Python.h>
 #include <sparrow-rockfinch/config/config.hpp>
 
