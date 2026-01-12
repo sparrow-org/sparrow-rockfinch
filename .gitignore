@@ -24,3 +24,5 @@ htmlcov/
 
 *.conda
 /.build
+
+*.locks
