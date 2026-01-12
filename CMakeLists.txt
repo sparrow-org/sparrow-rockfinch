@@ -219,7 +219,7 @@ if(ENABLE_COVERAGE)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND WIN32)
-    target_compile_options(sparrow-rockfinch
+    target_compile_options(sparrow-rockfinch-cpp
         PUBLIC
         -Wa,-mbig-obj)
 endif()
