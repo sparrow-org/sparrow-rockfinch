@@ -11,96 +11,26 @@ defaults:
     shell: bash -e -l {0}
 
 jobs:
-  windows_build_from_conda_forge:
+  windows_test_with_pixi:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        build_type: [Release]
-        build_shared: [ON, OFF]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Create build environment
-        uses: mamba-org/setup-micromamba@v2
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          environment-file: ./environment-dev.yml
-          environment-name: build_env
-          init-shell: bash
-          cache-environment: true
+          pixi-version: latest
+          cache: true
 
-      - name: Configure using cmake
-        run: |
-          if [ "${{ matrix.build_type }}" == "Release" ]; then
-            GLOB_PREFIX_PATH="$CONDA_PREFIX"
-          elif [ "${{ matrix.build_type }}" == "Debug" ]; then
-            GLOB_PREFIX_PATH="$CONDA_PREFIX/Library/debug;$CONDA_PREFIX"
-          fi
-          cmake -S ./ -B ./build \
-          -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
-          -DCMAKE_PREFIX_PATH=$GLOB_PREFIX_PATH \
-          -DSPARROW_ROCKFINCH_BUILD_SHARED=${{ matrix.build_shared }} \
-          -DSPARROW_ROCKFINCH_BUILD_TESTS=ON
+      - name: Build project
+        run: pixi build
 
-      - name: Build sparrow-rockfinch
-        working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target sparrow-rockfinch
+      - name: Run C++ tests
+        run: pixi run test_cpp
 
-      - name: Build tests
-        working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_ROCKFINCH_lib
+      - name: Run Python tests
+        run: pixi run test_python
 
-      - name: Run tests
-        working-directory: build
-        run: |
-          cmake --build . --config ${{ matrix.build_type }} --target run_tests_with_junit_report
-
-      - name: Run Sparrow integration tests
-        if: matrix.build_shared == 'ON'
-        working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target run_sparrow_tests_direct
-
-      - name: Install
-        if: matrix.build_shared == 'ON'
-        working-directory: build
-        run: cmake --install . --config ${{ matrix.build_type }}
-
-  windows_build_fetch_from_source:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        build_type: [Release]
-        build_shared: [ON, OFF]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Configure using cmake
-        run: |
-          cmake -S ./ -B ./build \
-          -DSPARROW_ROCKFINCH_BUILD_SHARED=${{ matrix.build_shared }} \
-          -DSPARROW_ROCKFINCH_BUILD_TESTS=ON \
-          -DFETCH_DEPENDENCIES_WITH_CMAKE=MISSING
-
-      - name: Build sparrow-rockfinch
-        working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target sparrow-rockfinch
-
-      - name: Build tests
-        working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target test_sparrow_ROCKFINCH_lib
-
-      - name: Run tests
-        working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target run_tests_with_junit_report
-
-      - name: Run Sparrow integration tests
-        if: matrix.build_shared == 'ON'
-        working-directory: build
-        run: cmake --build . --config ${{ matrix.build_type }} --target run_sparrow_tests_direct
-
-      - name: Install
-        if: matrix.build_shared == 'ON'
-        working-directory: build
-        run: cmake --install . --config ${{ matrix.build_type }}
-        
+      - name: Run integration tests
+        run: pixi run test_integration

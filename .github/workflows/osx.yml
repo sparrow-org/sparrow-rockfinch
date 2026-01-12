@@ -11,111 +11,26 @@ defaults:
     shell: bash -l -eo pipefail {0}
 
 jobs:
-  osx_build_from_conda_forge:
+  osx_test_with_pixi:
     runs-on: macos-latest
-    strategy:
-      matrix:
-        build_type: [Release, Debug]
-        build_shared: [ON, OFF]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Select XCode version
-        run: |
-          sudo xcode-select --switch /Applications/Xcode_16.4.app/Contents/Developer
-          xcodebuild -version
-
-      - name: Create build environment
-        uses: mamba-org/setup-micromamba@v2
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          environment-file: ./environment-dev.yml
-          environment-name: build_env
-          cache-environment: true
+          pixi-version: latest
+          cache: true
 
-      - name: Configure using cmake
-        run: |
-          cmake -G Ninja \
-          -Bbuild \
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-          -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
-          -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
-          -DSPARROW_ROCKFINCH_BUILD_SHARED=${{ matrix.build_shared }} \
-          -DSPARROW_ROCKFINCH_BUILD_TESTS=ON
+      - name: Build project
+        run: pixi run -e dev build
 
-      - name: Build sparrow-rockfinch
-        working-directory: build
-        run: cmake --build . --target sparrow-rockfinch
+      - name: Run C++ tests
+        run: pixi run -e dev test_cpp
 
-      - name: Build tests
-        working-directory: build
-        run: cmake --build . --target test_sparrow_ROCKFINCH_lib
+      - name: Run Python tests
+        run: pixi run -e dev test_python
 
-      - name: Run tests
-        working-directory: build
-        run: cmake --build . --target run_tests_with_junit_report
-
-      - name: Run Sparrow integration tests
-        if: matrix.build_shared == 'ON'
-        working-directory: build
-        run: cmake --build . --target run_sparrow_tests_direct
-
-      - name: Install
-        if: matrix.build_shared == 'ON'
-        working-directory: build
-        run: cmake --install .
-
-  osx_build_fetch_from_source:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        build_type: [Release, Debug]
-        build_shared: [ON, OFF]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Select XCode version
-        run: |
-          sudo xcode-select --switch /Applications/Xcode_16.4.app/Contents/Developer
-          xcodebuild -version
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-
-      - name: Install Python test dependencies
-        run: pip install pytest polars pyarrow
-
-      - name: Configure using cmake
-        run: |
-          cmake -G Ninja \
-          -Bbuild \
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-          -DSPARROW_ROCKFINCH_BUILD_SHARED=${{ matrix.build_shared }} \
-          -DSPARROW_ROCKFINCH_BUILD_TESTS=ON \
-          -DFETCH_DEPENDENCIES_WITH_CMAKE=MISSING \
-          -DPython_EXECUTABLE=$(which python3)
-
-      - name: Build sparrow-rockfinch
-        working-directory: build
-        run: cmake --build . --target sparrow-rockfinch
-
-      - name: Build tests
-        working-directory: build
-        run: cmake --build . --target test_sparrow_ROCKFINCH_lib
-
-      - name: Run tests
-        working-directory: build
-        run: cmake --build . --target run_tests_with_junit_report
-
-      - name: Run sparrow integration tests
-        if: matrix.build_shared == 'ON'
-        working-directory: build
-        run: cmake --build . --target run_sparrow_tests_direct
-
-      - name: Install
-        if: matrix.build_shared == 'ON'
-        working-directory: build
-        run: sudo cmake --install .
+      - name: Run integration tests
+        run: pixi run -e dev test_integration

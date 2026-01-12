@@ -24,7 +24,7 @@ namespace
     /**
      * @brief Create a test sparrow array with sample nullable int32 data.
      */
-    sparrow::pycapsule::SparrowArray create_test_array()
+    sparrow::rockfinch::SparrowArray create_test_array()
     {
         std::vector<sparrow::nullable<int32_t>> values = {
             sparrow::make_nullable<int32_t>(10, true),
@@ -35,7 +35,7 @@ namespace
         };
 
         sparrow::primitive_array<int32_t> prim_array(std::move(values));
-        return sparrow::pycapsule::SparrowArray(sparrow::array(std::move(prim_array)));
+        return sparrow::rockfinch::SparrowArray(sparrow::array(std::move(prim_array)));
     }
 }
 

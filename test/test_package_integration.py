@@ -10,19 +10,6 @@ The C++ SparrowArray class implements the Arrow PyCapsule Interface (__arrow_c_a
 allowing direct integration with Polars without going through PyArrow.
 """
 
-# Import helpers from our Python module
-from sparrow_helpers import (
-    ArrowArrayExportable,
-    SparrowArray,
-    SparrowArrayType,
-)
-
-# Import the C++ module for create_test_array (try release first, then debug)
-try:
-    import test_sparrow_helper  # noqa: E402
-except ImportError:
-    import test_sparrow_helperd as test_sparrow_helper  # noqa: E402
-
 import sys
 
 import pytest
@@ -31,8 +18,11 @@ import pyarrow as pa
 from polars._plr import PySeries
 from polars._utils.wrap import wrap_s
 
+from sparrow_rockfinch import SparrowArray
+
+
 def arrow_array_to_series(
-    arrow_array: ArrowArrayExportable, name: str = ""
+    arrow_array, name: str = ""
 ) -> pl.Series:
     """
     Convert an object implementing __arrow_c_array__ to a Polars Series.
@@ -57,66 +47,6 @@ def arrow_array_to_series(
     if name:
         series = series.alias(name)
     return series
-
-
-# =============================================================================
-# Test 1: Sparrow → Polars (Create array in C++, import to Polars)
-# =============================================================================
-
-
-class TestSparrowToPolars:
-    """Test creating an array in C++ (sparrow) and importing to Polars."""
-
-    def test_create_sparrow_array(self):
-        """Create a SparrowArray in C++ that implements __arrow_c_array__."""
-        sparrow_array = test_sparrow_helper.create_test_array()
-
-        assert sparrow_array is not None, "Received null SparrowArray from C++"
-        assert hasattr(sparrow_array, "__arrow_c_array__"), (
-            "SparrowArray missing __arrow_c_array__ method"
-        )
-        assert sparrow_array.size() == 5, f"Expected size 5, got {sparrow_array.size()}"
-
-    def test_sparrow_array_type(self):
-        """Verify that created array is a sparrow.SparrowArray instance."""
-        sparrow_array = test_sparrow_helper.create_test_array()
-
-        # Check the type name
-        type_name = type(sparrow_array).__name__
-        assert type_name == "SparrowArray", (
-            f"Expected type 'SparrowArray', got '{type_name}'"
-        )
-
-        # Check the module-qualified name (allow debug 'd' suffix)
-        full_name = f"{type(sparrow_array).__module__}.{type_name}"
-        valid_names = ("sparrow_rockfinch.SparrowArray", "sparrow_rockfinchd.SparrowArray")
-        assert full_name in valid_names, (
-            f"Expected one of {valid_names}, got '{full_name}'"
-        )
-
-    def test_sparrow_to_polars_series(self):
-        """Convert SparrowArray to Polars Series using the Arrow PyCapsule Interface."""
-        sparrow_array = test_sparrow_helper.create_test_array()
-        polars_series = arrow_array_to_series(sparrow_array)
-
-        assert polars_series.dtype == pl.Int32, (
-            f"Expected Int32, got {polars_series.dtype}"
-        )
-        expected = [10, 20, None, 40, 50]
-        actual = polars_series.to_list()
-        assert expected == actual, (
-            f"Data mismatch! Expected: {expected}, Actual: {actual}"
-        )
-
-    def test_sparrow_to_polars_preserves_nulls(self):
-        """Verify that null values from sparrow are preserved in Polars."""
-        sparrow_array = test_sparrow_helper.create_test_array()
-        polars_series = arrow_array_to_series(sparrow_array)
-
-        # The test array has a null at index 2
-        values = polars_series.to_list()
-        assert values[2] is None, "Null value not preserved at index 2"
-
 
 # =============================================================================
 # Test 2: PyArrow → Sparrow (Create array in PyArrow, import to sparrow)

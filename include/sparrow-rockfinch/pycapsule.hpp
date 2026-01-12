@@ -1,8 +1,9 @@
 #pragma once
 
-#include <utility>
 
 #define PY_SSIZE_T_CLEAN
+#include <utility>
+
 #include <Python.h>
 #include <sparrow-rockfinch/config/config.hpp>
 
@@ -15,7 +16,7 @@ namespace sparrow
 struct ArrowSchema;
 struct ArrowArray;
 
-namespace sparrow::pycapsule
+namespace sparrow::rockfinch
 {
     /**
      * @brief Imports a sparrow array from schema and array PyCapsules.
