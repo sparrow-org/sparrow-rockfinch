@@ -3,6 +3,8 @@
 #include <sparrow/array.hpp>
 #include <sparrow/primitive_array.hpp>
 #include <sparrow/utils/nullable.hpp>
+#include <sparrow/c_interface.hpp>
+#include <sparrow/c_stream_interface.hpp>
 
 #include "doctest/doctest.h"
 
@@ -261,6 +263,228 @@ namespace sparrow::rockfinch
 
                     // Capsules go out of scope and clean up automatically
                 }
+            }
+        }
+    }
+
+    TEST_SUITE("pycapsule_stream")
+    {
+        TEST_CASE("export_array_to_stream_capsule")
+        {
+            PythonInitializer py_init;
+
+            SUBCASE("exports_valid_stream_capsule")
+            {
+                auto arr = make_test_array();
+                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
+
+                PyObjectGuard stream_guard(stream_capsule);
+
+                REQUIRE_NE(stream_capsule, nullptr);
+                CHECK(PyCapsule_CheckExact(stream_capsule));
+                CHECK_EQ(std::string(PyCapsule_GetName(stream_capsule)), "arrow_array_stream");
+            }
+
+            SUBCASE("stream_capsule_contains_valid_stream")
+            {
+                auto arr = make_test_array();
+                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
+
+                PyObjectGuard stream_guard(stream_capsule);
+
+                ArrowArrayStream* stream = static_cast<ArrowArrayStream*>(
+                    PyCapsule_GetPointer(stream_capsule, "arrow_array_stream")
+                );
+
+                REQUIRE_NE(stream, nullptr);
+                CHECK_NE(stream->release, nullptr);
+                CHECK_NE(stream->get_schema, nullptr);
+                CHECK_NE(stream->get_next, nullptr);
+            }
+        }
+
+        TEST_CASE("export_arrays_to_stream_capsule")
+        {
+            PythonInitializer py_init;
+
+            SUBCASE("exports_multiple_arrays_to_stream")
+            {
+                std::vector<sparrow::array> arrays;
+                arrays.push_back(make_test_array());
+                arrays.push_back(make_test_array());
+                arrays.push_back(make_test_array());
+
+                PyObject* stream_capsule = export_arrays_to_stream_capsule(arrays);
+
+                PyObjectGuard stream_guard(stream_capsule);
+
+                REQUIRE_NE(stream_capsule, nullptr);
+                CHECK(PyCapsule_CheckExact(stream_capsule));
+                CHECK_EQ(std::string(PyCapsule_GetName(stream_capsule)), "arrow_array_stream");
+            }
+
+            SUBCASE("empty_array_list_returns_nullptr")
+            {
+                std::vector<sparrow::array> arrays;
+                PyObject* stream_capsule = export_arrays_to_stream_capsule(arrays);
+
+                // Clear the Python error that was set
+                PyErr_Clear();
+
+                CHECK_EQ(stream_capsule, nullptr);
+            }
+        }
+
+        TEST_CASE("import_arrays_from_stream_capsule")
+        {
+            PythonInitializer py_init;
+
+            SUBCASE("imports_single_array_from_stream")
+            {
+                auto arr = make_test_array();
+                size_t original_size = arr.size();
+
+                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
+                PyObjectGuard stream_guard(stream_capsule);
+
+                auto imported_arrays = import_arrays_from_stream_capsule(stream_capsule);
+
+                REQUIRE_EQ(imported_arrays.size(), 1);
+                CHECK_EQ(imported_arrays[0].size(), original_size);
+            }
+
+            SUBCASE("imports_multiple_arrays_from_stream")
+            {
+                std::vector<sparrow::array> original_arrays;
+                original_arrays.push_back(make_test_array());
+                original_arrays.push_back(make_test_array());
+
+                PyObject* stream_capsule = export_arrays_to_stream_capsule(original_arrays);
+                PyObjectGuard stream_guard(stream_capsule);
+
+                auto imported_arrays = import_arrays_from_stream_capsule(stream_capsule);
+
+                REQUIRE_EQ(imported_arrays.size(), 2);
+                CHECK_EQ(imported_arrays[0].size(), 5);
+                CHECK_EQ(imported_arrays[1].size(), 5);
+            }
+        }
+
+        TEST_CASE("import_array_from_stream_capsule")
+        {
+            PythonInitializer py_init;
+
+            SUBCASE("imports_first_array_from_stream")
+            {
+                auto arr = make_test_array();
+                size_t original_size = arr.size();
+
+                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
+                PyObjectGuard stream_guard(stream_capsule);
+
+                auto imported_arr = import_array_from_stream_capsule(stream_capsule);
+
+                CHECK_EQ(imported_arr.size(), original_size);
+            }
+        }
+
+        TEST_CASE("stream_round_trip")
+        {
+            PythonInitializer py_init;
+
+            SUBCASE("preserves_array_data_through_stream")
+            {
+                // Create original array with specific values
+                std::vector<sparrow::nullable<int32_t>> values = {
+                    sparrow::make_nullable<int32_t>(100, true),
+                    sparrow::make_nullable<int32_t>(200, true),
+                    sparrow::make_nullable<int32_t>(0, false),  // null
+                    sparrow::make_nullable<int32_t>(400, true)
+                };
+
+                sparrow::primitive_array<int32_t> prim_array(std::move(values));
+                sparrow::array original_arr(std::move(prim_array));
+
+                size_t original_size = original_arr.size();
+
+                // Export to stream
+                PyObject* stream_capsule = export_array_to_stream_capsule(original_arr);
+                PyObjectGuard stream_guard(stream_capsule);
+
+                REQUIRE_NE(stream_capsule, nullptr);
+
+                // Import from stream
+                auto imported_arr = import_array_from_stream_capsule(stream_capsule);
+
+                // Verify
+                CHECK_EQ(imported_arr.size(), original_size);
+            }
+
+            SUBCASE("multiple_arrays_round_trip")
+            {
+                std::vector<sparrow::array> original_arrays;
+                original_arrays.push_back(make_test_array());
+                original_arrays.push_back(make_test_array());
+                original_arrays.push_back(make_test_array());
+
+                // Export to stream
+                PyObject* stream_capsule = export_arrays_to_stream_capsule(original_arrays);
+                PyObjectGuard stream_guard(stream_capsule);
+
+                REQUIRE_NE(stream_capsule, nullptr);
+
+                // Import from stream
+                auto imported_arrays = import_arrays_from_stream_capsule(stream_capsule);
+
+                // Verify count and sizes
+                REQUIRE_EQ(imported_arrays.size(), 3);
+                for (const auto& arr : imported_arrays)
+                {
+                    CHECK_EQ(arr.size(), 5);
+                }
+            }
+        }
+
+        TEST_CASE("stream_memory_management")
+        {
+            PythonInitializer py_init;
+
+            SUBCASE("stream_cleanup_on_capsule_destruction")
+            {
+                {
+                    auto arr = make_test_array();
+                    PyObject* stream_capsule = export_array_to_stream_capsule(arr);
+                    PyObjectGuard stream_guard(stream_capsule);
+
+                    // Get stream pointer before destruction
+                    ArrowArrayStream* stream = static_cast<ArrowArrayStream*>(
+                        PyCapsule_GetPointer(stream_capsule, "arrow_array_stream")
+                    );
+                    CHECK_NE(stream->release, nullptr);
+
+                    // Stream guard goes out of scope, capsule is released
+                }
+                // No memory leaks or crashes expected
+            }
+
+            SUBCASE("consumed_stream_has_null_release")
+            {
+                auto arr = make_test_array();
+                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
+                PyObjectGuard stream_guard(stream_capsule);
+
+                // Get stream pointer
+                ArrowArrayStream* stream = static_cast<ArrowArrayStream*>(
+                    PyCapsule_GetPointer(stream_capsule, "arrow_array_stream")
+                );
+
+                CHECK_NE(stream->release, nullptr);
+
+                // Consume the stream
+                auto imported_arrays = import_arrays_from_stream_capsule(stream_capsule);
+
+                // After consumption, release should be null
+                CHECK_EQ(stream->release, nullptr);
             }
         }
     }

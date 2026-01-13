@@ -39,11 +39,18 @@ namespace sparrow::rockfinch
         explicit SparrowArray(sparrow::array&& arr);
 
         /**
-         * @brief Export the array via the Arrow PyCapsule interface.
+         * @brief Export the array via the Arrow PyCapsule interface (__arrow_c_array__).
          *
          * @return A pair of (schema_capsule, array_capsule). Caller owns the references.
          */
         std::pair<PyObject*, PyObject*> export_to_capsules() const;
+
+        /**
+         * @brief Export the schema via the Arrow PyCapsule interface (__arrow_c_schema__).
+         *
+         * @return A PyCapsule containing an ArrowSchema. Caller owns the reference.
+         */
+        PyObject* export_schema_to_capsule() const;
 
         /**
          * @brief Get the number of elements in the array.
@@ -63,4 +70,4 @@ namespace sparrow::rockfinch
         sparrow::array m_array;
     };
 
-}  // namespace sparrow::pycapsule
+}  // namespace sparrow::rockfinch
