@@ -187,117 +187,6 @@ namespace sparrow::rockfinch
         return capsule;
     }
 
-    PyObject* export_array_to_stream_capsule(array& arr)
-    {
-        // Extract Arrow structures from the array
-        auto [arrow_arr, arrow_sch] = sparrow::extract_arrow_structures(std::move(arr));
-
-        // Create a new stream on the heap
-        auto* stream_ptr = new ArrowArrayStream();
-        sparrow::fill_arrow_array_stream(*stream_ptr);
-
-        // Get the private data and set the schema and array
-        auto* private_data = static_cast<sparrow::arrow_array_stream_private_data*>(stream_ptr->private_data);
-        
-        // Copy schema into the stream
-        sparrow::schema_unique_ptr schema_ptr(new ArrowSchema(), sparrow::arrow_schema_deleter{});
-        sparrow::copy_schema(arrow_sch, *schema_ptr);
-        private_data->import_schema(std::move(schema_ptr));
-        
-        // Import the array
-        sparrow::array_unique_ptr array_ptr(new ArrowArray(arrow_arr), sparrow::arrow_array_deleter{});
-        // Clear the source so it doesn't get double-released
-        arrow_arr = ArrowArray{};
-        private_data->import_array(std::move(array_ptr));
-        
-        // Release our copy of the schema since the stream now owns a copy
-        if (arrow_sch.release != nullptr)
-        {
-            arrow_sch.release(&arrow_sch);
-        }
-
-        PyObject* capsule = PyCapsule_New(
-            stream_ptr,
-            arrow_array_stream_str,
-            release_arrow_array_stream_pycapsule
-        );
-
-        if (capsule == nullptr)
-        {
-            if (stream_ptr->release != nullptr)
-            {
-                stream_ptr->release(stream_ptr);
-            }
-            delete stream_ptr;
-            return nullptr;
-        }
-
-        return capsule;
-    }
-
-    PyObject* export_arrays_to_stream_capsule(std::vector<array>& arrays)
-    {
-        if (arrays.empty())
-        {
-            PyErr_SetString(PyExc_ValueError, "Cannot create stream from empty array list");
-            return nullptr;
-        }
-
-        // Create a new stream on the heap
-        auto* stream_ptr = new ArrowArrayStream();
-        sparrow::fill_arrow_array_stream(*stream_ptr);
-
-        // Get the private data
-        auto* private_data = static_cast<sparrow::arrow_array_stream_private_data*>(stream_ptr->private_data);
-        
-        bool schema_set = false;
-        
-        for (auto& arr : arrays)
-        {
-            // Extract Arrow structures from the array
-            auto [arrow_arr, arrow_sch] = sparrow::extract_arrow_structures(std::move(arr));
-            
-            // Set schema from first array
-            if (!schema_set)
-            {
-                sparrow::schema_unique_ptr schema_ptr(new ArrowSchema(), sparrow::arrow_schema_deleter{});
-                sparrow::copy_schema(arrow_sch, *schema_ptr);
-                private_data->import_schema(std::move(schema_ptr));
-                schema_set = true;
-            }
-            
-            // Import the array
-            sparrow::array_unique_ptr array_ptr(new ArrowArray(arrow_arr), sparrow::arrow_array_deleter{});
-            // Clear the source so it doesn't get double-released
-            arrow_arr = ArrowArray{};
-            private_data->import_array(std::move(array_ptr));
-            
-            // Release our copy of the schema
-            if (arrow_sch.release != nullptr)
-            {
-                arrow_sch.release(&arrow_sch);
-            }
-        }
-
-        PyObject* capsule = PyCapsule_New(
-            stream_ptr,
-            arrow_array_stream_str,
-            release_arrow_array_stream_pycapsule
-        );
-
-        if (capsule == nullptr)
-        {
-            if (stream_ptr->release != nullptr)
-            {
-                stream_ptr->release(stream_ptr);
-            }
-            delete stream_ptr;
-            return nullptr;
-        }
-
-        return capsule;
-    }
-
     std::vector<array> import_arrays_from_stream_capsule(PyObject* stream_capsule)
     {
         std::vector<array> result;
@@ -336,5 +225,146 @@ namespace sparrow::rockfinch
             return array{};
         }
         return std::move(arrays[0]);
+    }
+
+    PyObject* export_array_to_stream_capsule(array& arr)
+    {
+        auto proxy = create_stream_proxy_from_array(std::move(arr));
+        return export_stream_proxy_to_capsule(proxy);
+    }
+
+    PyObject* export_arrays_to_stream_capsule(std::vector<array>& arrays)
+    {
+        if (arrays.empty())
+        {
+            PyErr_SetString(PyExc_ValueError, "Cannot create stream from empty array list");
+            return nullptr;
+        }
+
+        // Create a new stream
+        ArrowArrayStream temp_stream;
+        sparrow::fill_arrow_array_stream(temp_stream);
+
+        auto* private_data = static_cast<sparrow::arrow_array_stream_private_data*>(temp_stream.private_data);
+
+        bool schema_set = false;
+
+        for (auto& arr : arrays)
+        {
+            // Extract Arrow structures from the array
+            auto [arrow_arr, arrow_sch] = sparrow::extract_arrow_structures(std::move(arr));
+
+            // Set schema from first array
+            if (!schema_set)
+            {
+                sparrow::schema_unique_ptr schema_ptr(new ArrowSchema(), sparrow::arrow_schema_deleter{});
+                sparrow::copy_schema(arrow_sch, *schema_ptr);
+                private_data->import_schema(std::move(schema_ptr));
+                schema_set = true;
+            }
+
+            // Import the array
+            sparrow::array_unique_ptr array_ptr(new ArrowArray(arrow_arr), sparrow::arrow_array_deleter{});
+            arrow_arr = ArrowArray{};  // Clear source to prevent double-release
+            private_data->import_array(std::move(array_ptr));
+
+            // Release our copy of the schema
+            if (arrow_sch.release != nullptr)
+            {
+                arrow_sch.release(&arrow_sch);
+            }
+        }
+
+        // Create proxy and export to capsule
+        arrow_array_stream_proxy proxy(std::move(temp_stream));
+        return export_stream_proxy_to_capsule(proxy);
+    }
+
+    PyObject* export_stream_proxy_to_capsule(arrow_array_stream_proxy& proxy)
+    {
+        // Export the stream from the proxy
+        ArrowArrayStream* stream_ptr = proxy.export_stream();
+        if (stream_ptr == nullptr)
+        {
+            PyErr_SetString(PyExc_RuntimeError, "Failed to export stream from proxy");
+            return nullptr;
+        }
+
+        // Create heap copy for capsule ownership
+        auto* heap_stream = new ArrowArrayStream(*stream_ptr);
+        // Clear the source to prevent double-release
+        stream_ptr->release = nullptr;
+
+        PyObject* capsule = PyCapsule_New(
+            heap_stream,
+            arrow_array_stream_str,
+            release_arrow_array_stream_pycapsule
+        );
+
+        if (capsule == nullptr)
+        {
+            if (heap_stream->release != nullptr)
+            {
+                heap_stream->release(heap_stream);
+            }
+            delete heap_stream;
+            return nullptr;
+        }
+
+        return capsule;
+    }
+
+    arrow_array_stream_proxy import_stream_proxy_from_capsule(PyObject* stream_capsule)
+    {
+        // Get the stream pointer from the capsule
+        auto* stream = static_cast<ArrowArrayStream*>(
+            PyCapsule_GetPointer(stream_capsule, arrow_array_stream_str)
+        );
+        if (stream == nullptr)
+        {
+            // Error already set by PyCapsule_GetPointer
+            return arrow_array_stream_proxy();
+        }
+
+        // Move the stream into a new proxy
+        ArrowArrayStream stream_copy = *stream;
+        // Mark the capsule's stream as consumed
+        stream->release = nullptr;
+
+        return arrow_array_stream_proxy(std::move(stream_copy));
+    }
+
+    arrow_array_stream_proxy create_stream_proxy_from_array(array&& arr)
+    {
+        // Create a new stream proxy
+        arrow_array_stream_proxy proxy;
+
+        // Extract Arrow structures from the array
+        auto [arrow_arr, arrow_sch] = sparrow::extract_arrow_structures(std::move(arr));
+
+        // Create a temporary stream and populate it
+        ArrowArrayStream temp_stream;
+        sparrow::fill_arrow_array_stream(temp_stream);
+
+        auto* private_data = static_cast<sparrow::arrow_array_stream_private_data*>(temp_stream.private_data);
+
+        // Import schema
+        sparrow::schema_unique_ptr schema_ptr(new ArrowSchema(), sparrow::arrow_schema_deleter{});
+        sparrow::copy_schema(arrow_sch, *schema_ptr);
+        private_data->import_schema(std::move(schema_ptr));
+
+        // Import array
+        sparrow::array_unique_ptr array_ptr(new ArrowArray(arrow_arr), sparrow::arrow_array_deleter{});
+        arrow_arr = ArrowArray{};  // Clear source to prevent double-release
+        private_data->import_array(std::move(array_ptr));
+
+        // Release our copy of the schema
+        if (arrow_sch.release != nullptr)
+        {
+            arrow_sch.release(&arrow_sch);
+        }
+
+        // Move the stream into the proxy
+        return arrow_array_stream_proxy(std::move(temp_stream));
     }
 }

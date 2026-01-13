@@ -9,12 +9,12 @@
 namespace sparrow::rockfinch
 {
     SparrowStream::SparrowStream(sparrow::array&& arr)
+        : m_stream_proxy(create_stream_proxy_from_array(std::move(arr)))
     {
-        m_arrays.push_back(std::move(arr));
     }
 
-    SparrowStream::SparrowStream(std::vector<sparrow::array>&& arrays)
-        : m_arrays(std::move(arrays))
+    SparrowStream::SparrowStream(sparrow::arrow_array_stream_proxy&& proxy)
+        : m_stream_proxy(std::move(proxy))
     {
     }
 
@@ -26,17 +26,12 @@ namespace sparrow::rockfinch
             return nullptr;
         }
 
-        PyObject* capsule = sparrow::rockfinch::export_arrays_to_stream_capsule(m_arrays);
+        PyObject* capsule = sparrow::rockfinch::export_stream_proxy_to_capsule(m_stream_proxy);
         if (capsule != nullptr)
         {
             m_consumed = true;
         }
         return capsule;
-    }
-
-    size_t SparrowStream::batch_count() const
-    {
-        return m_arrays.size();
     }
 
     bool SparrowStream::is_consumed() const

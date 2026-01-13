@@ -3,9 +3,8 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include <vector>
-
 #include <sparrow/array.hpp>
+#include <sparrow/arrow_interface/arrow_array_stream_proxy.hpp>
 
 #include "sparrow-rockfinch/config/config.hpp"
 
@@ -14,8 +13,8 @@ namespace sparrow::rockfinch
     /**
      * @brief C++ wrapper class for Arrow streams with Python interop.
      *
-     * This class wraps one or more sparrow::array objects and provides methods
-     * for the Arrow PyCapsule Interface (ArrowStreamExportable protocol),
+     * This class wraps sparrow arrays consumed from an arrow_array_stream_proxy
+     * and provides methods for the Arrow PyCapsule Interface (ArrowStreamExportable protocol),
      * allowing it to be passed to libraries that expect Arrow streams.
      * 
      * Note: This class is designed to be wrapped by nanobind (or similar)
@@ -32,11 +31,13 @@ namespace sparrow::rockfinch
         explicit SparrowStream(sparrow::array&& arr);
 
         /**
-         * @brief Construct a SparrowStream from multiple sparrow::arrays.
+         * @brief Construct a SparrowStream from an arrow_array_stream_proxy.
          *
-         * @param arrays Vector of sparrow arrays to wrap (will be moved).
+         * Consumes all arrays from the proxy and stores them internally.
+         *
+         * @param proxy The stream proxy to consume arrays from (will be moved).
          */
-        explicit SparrowStream(std::vector<sparrow::array>&& arrays);
+        explicit SparrowStream(sparrow::arrow_array_stream_proxy&& proxy);
 
         /**
          * @brief Export as a stream via the Arrow PyCapsule interface (__arrow_c_stream__).
@@ -48,13 +49,6 @@ namespace sparrow::rockfinch
         PyObject* export_to_capsule();
 
         /**
-         * @brief Get the number of arrays/batches in the stream.
-         *
-         * @return The number of batches.
-         */
-        [[nodiscard]] size_t batch_count() const;
-
-        /**
          * @brief Check if the stream has been consumed.
          *
          * @return True if the stream has been exported and consumed.
@@ -62,7 +56,7 @@ namespace sparrow::rockfinch
         [[nodiscard]] bool is_consumed() const;
 
     private:
-        std::vector<sparrow::array> m_arrays;
+        sparrow::arrow_array_stream_proxy m_stream_proxy;
         bool m_consumed = false;
     };
 

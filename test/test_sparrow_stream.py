@@ -71,32 +71,6 @@ class TestSparrowStreamCreation:
 class TestSparrowStreamProperties:
     """Test SparrowStream instance properties."""
 
-    def test_batch_count_single_batch(self):
-        """Verify batch_count returns correct count for single batch."""
-        batch = pa.record_batch({"x": [1, 2, 3]})
-        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
-        stream = sr.SparrowStream.from_stream(reader)
-
-        assert stream.batch_count() == 1
-
-    def test_batch_count_multiple_batches(self):
-        """Verify batch_count returns correct count for multiple batches."""
-        batch1 = pa.record_batch({"x": [1, 2, 3]})
-        batch2 = pa.record_batch({"x": [4, 5, 6]})
-        batch3 = pa.record_batch({"x": [7, 8, 9]})
-        reader = pa.RecordBatchReader.from_batches(batch1.schema, [batch1, batch2, batch3])
-        stream = sr.SparrowStream.from_stream(reader)
-
-        assert stream.batch_count() == 3
-
-    def test_len_returns_batch_count(self):
-        """Verify __len__ returns batch count."""
-        batch = pa.record_batch({"x": [1, 2, 3]})
-        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
-        stream = sr.SparrowStream.from_stream(reader)
-
-        assert len(stream) == 1
-
     def test_is_consumed_initially_false(self):
         """Verify is_consumed is False for new stream."""
         batch = pa.record_batch({"x": [1, 2, 3]})
@@ -228,7 +202,6 @@ class TestSparrowStreamWithDifferentTypes:
         reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
         stream = sr.SparrowStream.from_stream(reader)
 
-        assert stream.batch_count() == 1
         capsule = stream.__arrow_c_stream__()
         assert capsule is not None
 
@@ -241,7 +214,8 @@ class TestSparrowStreamWithDifferentTypes:
         reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
         stream = sr.SparrowStream.from_stream(reader)
 
-        assert stream.batch_count() == 1
+        capsule = stream.__arrow_c_stream__()
+        assert capsule is not None
 
     def test_string_types(self):
         """Test stream with string types."""
@@ -251,7 +225,8 @@ class TestSparrowStreamWithDifferentTypes:
         reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
         stream = sr.SparrowStream.from_stream(reader)
 
-        assert stream.batch_count() == 1
+        capsule = stream.__arrow_c_stream__()
+        assert capsule is not None
 
     def test_with_nulls(self):
         """Test stream with null values."""
@@ -262,7 +237,8 @@ class TestSparrowStreamWithDifferentTypes:
         reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
         stream = sr.SparrowStream.from_stream(reader)
 
-        assert stream.batch_count() == 1
+        capsule = stream.__arrow_c_stream__()
+        assert capsule is not None
 
 
 class TestSparrowStreamErrorHandling:

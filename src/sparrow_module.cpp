@@ -10,6 +10,8 @@
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/vector.h>
 
+#include <sparrow/arrow_interface/arrow_array_stream_proxy.hpp>
+
 #include <sparrow-rockfinch/pycapsule.hpp>
 #include <sparrow-rockfinch/sparrow_array_python_class.hpp>
 #include <sparrow-rockfinch/sparrow_stream_python_class.hpp>
@@ -92,13 +94,13 @@ namespace sparrow::rockfinch
             );
         }
 
-        std::vector<sparrow::array> arrays = import_arrays_from_stream_capsule(stream_capsule);
-        if (arrays.empty() && PyErr_Occurred())
+        sparrow::arrow_array_stream_proxy proxy = import_stream_proxy_from_capsule(stream_capsule);
+        if (PyErr_Occurred())
         {
             throw nb::python_error();
         }
 
-        return SparrowStream(std::move(arrays));
+        return SparrowStream(std::move(proxy));
     }
 
     /**
@@ -207,11 +209,8 @@ namespace sparrow::rockfinch
                 "-------\n"
                 "object\n"
                 "    A PyCapsule containing an ArrowArrayStream.")
-            .def("batch_count", &SparrowStream::batch_count,
-                "Get the number of batches in the stream.")
             .def("is_consumed", &SparrowStream::is_consumed,
-                "Check if the stream has been consumed.")
-            .def("__len__", &SparrowStream::batch_count);
+                "Check if the stream has been consumed.");
     }
 
 }  // namespace sparrow::rockfinch
