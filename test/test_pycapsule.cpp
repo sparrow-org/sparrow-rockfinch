@@ -1,3 +1,4 @@
+#include <optional>
 #include <sparrow-rockfinch/pycapsule.hpp>
 
 #include <sparrow/array.hpp>
@@ -5,6 +6,7 @@
 #include <sparrow/utils/nullable.hpp>
 #include <sparrow/c_interface.hpp>
 #include <sparrow/c_stream_interface.hpp>
+#include <sparrow/arrow_interface/arrow_array_stream_proxy.hpp>
 
 #include "doctest/doctest.h"
 
@@ -265,32 +267,38 @@ namespace sparrow::rockfinch
                 }
             }
         }
-    }
 
-    TEST_SUITE("pycapsule_stream")
-    {
-        TEST_CASE("export_array_to_stream_capsule")
+        TEST_CASE("export_stream_proxy_to_capsule")
         {
             PythonInitializer py_init;
 
-            SUBCASE("exports_valid_stream_capsule")
+            SUBCASE("exports_valid_capsule")
             {
-                auto arr = make_test_array();
-                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
+                // Create a simple stream with one array
+                std::vector<sparrow::array> arrays;
+                arrays.push_back(make_test_array());
+                
+                sparrow::arrow_array_stream_proxy proxy;
+                proxy.push(std::move(arrays));
+                PyObject* stream_capsule = export_stream_proxy_to_capsule(proxy);
 
-                PyObjectGuard stream_guard(stream_capsule);
+                PyObjectGuard capsule_guard(stream_capsule);
 
                 REQUIRE_NE(stream_capsule, nullptr);
                 CHECK(PyCapsule_CheckExact(stream_capsule));
                 CHECK_EQ(std::string(PyCapsule_GetName(stream_capsule)), "arrow_array_stream");
             }
 
-            SUBCASE("stream_capsule_contains_valid_stream")
+            SUBCASE("exported_capsule_contains_valid_stream")
             {
-                auto arr = make_test_array();
-                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
+                std::vector<sparrow::array> arrays;
+                arrays.push_back(make_test_array());
+                
+                sparrow::arrow_array_stream_proxy proxy;
+                proxy.push(std::move(arrays));
+                PyObject* stream_capsule = export_stream_proxy_to_capsule(proxy);
 
-                PyObjectGuard stream_guard(stream_capsule);
+                PyObjectGuard capsule_guard(stream_capsule);
 
                 ArrowArrayStream* stream = static_cast<ArrowArrayStream*>(
                     PyCapsule_GetPointer(stream_capsule, "arrow_array_stream")
@@ -298,149 +306,105 @@ namespace sparrow::rockfinch
 
                 REQUIRE_NE(stream, nullptr);
                 CHECK_NE(stream->release, nullptr);
-                CHECK_NE(stream->get_schema, nullptr);
                 CHECK_NE(stream->get_next, nullptr);
+                CHECK_NE(stream->get_schema, nullptr);
             }
-        }
 
-        TEST_CASE("export_arrays_to_stream_capsule")
-        {
-            PythonInitializer py_init;
-
-            SUBCASE("exports_multiple_arrays_to_stream")
+            SUBCASE("exports_stream_with_multiple_arrays")
             {
                 std::vector<sparrow::array> arrays;
                 arrays.push_back(make_test_array());
                 arrays.push_back(make_test_array());
                 arrays.push_back(make_test_array());
+                
+                sparrow::arrow_array_stream_proxy proxy;
+                proxy.push(std::move(arrays));
+                PyObject* stream_capsule = export_stream_proxy_to_capsule(proxy);
 
-                PyObject* stream_capsule = export_arrays_to_stream_capsule(arrays);
-
-                PyObjectGuard stream_guard(stream_capsule);
+                PyObjectGuard capsule_guard(stream_capsule);
 
                 REQUIRE_NE(stream_capsule, nullptr);
                 CHECK(PyCapsule_CheckExact(stream_capsule));
-                CHECK_EQ(std::string(PyCapsule_GetName(stream_capsule)), "arrow_array_stream");
             }
+        }
 
-            SUBCASE("empty_array_list_returns_nullptr")
+        TEST_CASE("import_stream_proxy_from_capsule")
+        {
+            PythonInitializer py_init;
+
+            SUBCASE("imports_valid_capsule")
             {
+                // Export a stream
                 std::vector<sparrow::array> arrays;
-                PyObject* stream_capsule = export_arrays_to_stream_capsule(arrays);
+                arrays.push_back(make_test_array());
+                
+                sparrow::arrow_array_stream_proxy original_proxy;
+                original_proxy.push(std::move(arrays));
+                PyObject* stream_capsule = export_stream_proxy_to_capsule(original_proxy);
 
-                // Clear the Python error that was set
-                PyErr_Clear();
+                PyObjectGuard capsule_guard(stream_capsule);
 
-                CHECK_EQ(stream_capsule, nullptr);
+                // Import it back
+                auto imported_proxy = import_stream_proxy_from_capsule(stream_capsule);
+                CHECK_NE(imported_proxy.pop(), std::nullopt);
+            }
+
+            SUBCASE("ownership_transfer_is_correct")
+            {
+                // Export a stream
+                std::vector<sparrow::array> arrays;
+                arrays.push_back(make_test_array());
+                
+                sparrow::arrow_array_stream_proxy original_proxy;
+                original_proxy.push(std::move(arrays));
+                PyObject* stream_capsule = export_stream_proxy_to_capsule(original_proxy);
+
+                PyObjectGuard capsule_guard(stream_capsule);
+
+                // Get pointer before import
+                ArrowArrayStream* stream_before = static_cast<ArrowArrayStream*>(
+                    PyCapsule_GetPointer(stream_capsule, "arrow_array_stream")
+                );
+
+                CHECK_NE(stream_before->release, nullptr);
+
+                // Import (transfers ownership)
+                auto imported_proxy = import_stream_proxy_from_capsule(stream_capsule);
+
+                // After import, release callback should be null
+                CHECK_EQ(stream_before->release, nullptr);
+
+                CHECK_NE(imported_proxy.pop(), std::nullopt);
             }
         }
 
-        TEST_CASE("import_arrays_from_stream_capsule")
+        TEST_CASE("round_trip_stream_export_import")
         {
             PythonInitializer py_init;
 
-            SUBCASE("imports_single_array_from_stream")
+            SUBCASE("preserves_stream_data")
             {
-                auto arr = make_test_array();
-                size_t original_size = arr.size();
+                // Create original stream with known data
+                std::vector<sparrow::array> arrays;
+                arrays.push_back(make_test_array());
+                arrays.push_back(make_test_array());
+                
+                sparrow::arrow_array_stream_proxy original_proxy;
+                original_proxy.push(std::move(arrays));
 
-                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
-                PyObjectGuard stream_guard(stream_capsule);
+                // Export
+                PyObject* stream_capsule = export_stream_proxy_to_capsule(original_proxy);
+                PyObjectGuard capsule_guard(stream_capsule);
 
-                auto imported_arrays = import_arrays_from_stream_capsule(stream_capsule);
+                // Import
+                auto imported_proxy = import_stream_proxy_from_capsule(stream_capsule);
 
-                REQUIRE_EQ(imported_arrays.size(), 1);
-                CHECK_EQ(imported_arrays[0].size(), original_size);
-            }
-
-            SUBCASE("imports_multiple_arrays_from_stream")
-            {
-                std::vector<sparrow::array> original_arrays;
-                original_arrays.push_back(make_test_array());
-                original_arrays.push_back(make_test_array());
-
-                PyObject* stream_capsule = export_arrays_to_stream_capsule(original_arrays);
-                PyObjectGuard stream_guard(stream_capsule);
-
-                auto imported_arrays = import_arrays_from_stream_capsule(stream_capsule);
-
-                REQUIRE_EQ(imported_arrays.size(), 2);
-                CHECK_EQ(imported_arrays[0].size(), 5);
-                CHECK_EQ(imported_arrays[1].size(), 5);
-            }
-        }
-
-        TEST_CASE("import_array_from_stream_capsule")
-        {
-            PythonInitializer py_init;
-
-            SUBCASE("imports_first_array_from_stream")
-            {
-                auto arr = make_test_array();
-                size_t original_size = arr.size();
-
-                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
-                PyObjectGuard stream_guard(stream_capsule);
-
-                auto imported_arr = import_array_from_stream_capsule(stream_capsule);
-
-                CHECK_EQ(imported_arr.size(), original_size);
-            }
-        }
-
-        TEST_CASE("stream_round_trip")
-        {
-            PythonInitializer py_init;
-
-            SUBCASE("preserves_array_data_through_stream")
-            {
-                // Create original array with specific values
-                std::vector<sparrow::nullable<int32_t>> values = {
-                    sparrow::make_nullable<int32_t>(100, true),
-                    sparrow::make_nullable<int32_t>(200, true),
-                    sparrow::make_nullable<int32_t>(0, false),  // null
-                    sparrow::make_nullable<int32_t>(400, true)
-                };
-
-                sparrow::primitive_array<int32_t> prim_array(std::move(values));
-                sparrow::array original_arr(std::move(prim_array));
-
-                size_t original_size = original_arr.size();
-
-                // Export to stream
-                PyObject* stream_capsule = export_array_to_stream_capsule(original_arr);
-                PyObjectGuard stream_guard(stream_capsule);
-
-                REQUIRE_NE(stream_capsule, nullptr);
-
-                // Import from stream
-                auto imported_arr = import_array_from_stream_capsule(stream_capsule);
-
-                // Verify
-                CHECK_EQ(imported_arr.size(), original_size);
-            }
-
-            SUBCASE("multiple_arrays_round_trip")
-            {
-                std::vector<sparrow::array> original_arrays;
-                original_arrays.push_back(make_test_array());
-                original_arrays.push_back(make_test_array());
-                original_arrays.push_back(make_test_array());
-
-                // Export to stream
-                PyObject* stream_capsule = export_arrays_to_stream_capsule(original_arrays);
-                PyObjectGuard stream_guard(stream_capsule);
-
-                REQUIRE_NE(stream_capsule, nullptr);
-
-                // Import from stream
-                auto imported_arrays = import_arrays_from_stream_capsule(stream_capsule);
-
-                // Verify count and sizes
-                REQUIRE_EQ(imported_arrays.size(), 3);
-                for (const auto& arr : imported_arrays)
+                // Try to get the next array
+                auto next_array = imported_proxy.pop();
+                CHECK(next_array.has_value());
+                if (next_array.has_value())
                 {
-                    CHECK_EQ(arr.size(), 5);
+                    CHECK_EQ(next_array.value().size(), 5);
                 }
             }
         }
@@ -449,42 +413,55 @@ namespace sparrow::rockfinch
         {
             PythonInitializer py_init;
 
-            SUBCASE("stream_cleanup_on_capsule_destruction")
+            SUBCASE("imported_stream_manages_memory_correctly")
             {
                 {
-                    auto arr = make_test_array();
-                    PyObject* stream_capsule = export_array_to_stream_capsule(arr);
-                    PyObjectGuard stream_guard(stream_capsule);
+                    std::vector<sparrow::array> arrays;
+                    arrays.push_back(make_test_array());
+                    
+                    sparrow::arrow_array_stream_proxy proxy;
+                    proxy.push(std::move(arrays));
+                    PyObject* stream_capsule = export_stream_proxy_to_capsule(proxy);
 
-                    // Get stream pointer before destruction
-                    ArrowArrayStream* stream = static_cast<ArrowArrayStream*>(
-                        PyCapsule_GetPointer(stream_capsule, "arrow_array_stream")
-                    );
-                    CHECK_NE(stream->release, nullptr);
+                    PyObjectGuard capsule_guard(stream_capsule);
 
-                    // Stream guard goes out of scope, capsule is released
+                    {
+                        auto imported_proxy = import_stream_proxy_from_capsule(stream_capsule);
+                        // imported_proxy goes out of scope here
+                    }
+
+                    // Capsule goes out of scope and cleans up automatically
                 }
-                // No memory leaks or crashes expected
             }
 
-            SUBCASE("consumed_stream_has_null_release")
+            SUBCASE("stream_can_be_consumed")
             {
-                auto arr = make_test_array();
-                PyObject* stream_capsule = export_array_to_stream_capsule(arr);
-                PyObjectGuard stream_guard(stream_capsule);
+                std::vector<sparrow::array> arrays;
+                arrays.push_back(make_test_array());
+                arrays.push_back(make_test_array());
+                
+                sparrow::arrow_array_stream_proxy proxy;
+                proxy.push(std::move(arrays));
+                PyObject* stream_capsule = export_stream_proxy_to_capsule(proxy);
+                PyObjectGuard capsule_guard(stream_capsule);
 
-                // Get stream pointer
-                ArrowArrayStream* stream = static_cast<ArrowArrayStream*>(
-                    PyCapsule_GetPointer(stream_capsule, "arrow_array_stream")
-                );
-
-                CHECK_NE(stream->release, nullptr);
+                auto imported_proxy = import_stream_proxy_from_capsule(stream_capsule);
 
                 // Consume the stream
-                auto imported_arrays = import_arrays_from_stream_capsule(stream_capsule);
+                size_t count = 0;
+                while (auto next = imported_proxy.pop())
+                {
+                    if (next.has_value())
+                    {
+                        ++count;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
 
-                // After consumption, release should be null
-                CHECK_EQ(stream->release, nullptr);
+                CHECK_EQ(count, 2);
             }
         }
     }

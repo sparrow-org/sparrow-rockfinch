@@ -5,6 +5,7 @@
 
 #include <sparrow/array.hpp>
 #include <sparrow/arrow_interface/arrow_array_stream_proxy.hpp>
+#include "sparrow-rockfinch/sparrow_array_python_class.hpp"
 
 #include "sparrow-rockfinch/config/config.hpp"
 
@@ -24,14 +25,12 @@ namespace sparrow::rockfinch
     {
     public:
         /**
-         * @brief Construct a SparrowStream from a single sparrow::array.
-         *
-         * @param arr The sparrow array to wrap (will be moved).
+         * Construct a SparrowStream
          */
-        explicit SparrowStream(sparrow::array&& arr);
+        SparrowStream() = default;
 
         /**
-         * @brief Construct a SparrowStream from an arrow_array_stream_proxy.
+         * Construct a SparrowStream from an arrow_array_stream_proxy.
          *
          * Consumes all arrays from the proxy and stores them internally.
          *
@@ -40,20 +39,35 @@ namespace sparrow::rockfinch
         explicit SparrowStream(sparrow::arrow_array_stream_proxy&& proxy);
 
         /**
-         * @brief Export as a stream via the Arrow PyCapsule interface (__arrow_c_stream__).
+         * Push a SparrowArray into the stream.
          *
-         * Each array in the stream is exported as a separate batch.
+         * @param arr The SparrowArray to push (will be moved).
+         */
+        void push(SparrowArray&& arr);
+
+        /**
+         * Pop the next SparrowArray from the stream.
          *
-         * @return A PyCapsule containing an ArrowArrayStream. Caller owns the reference.
+         * @return An optional SparrowArray; std::nullopt if the stream is exhausted.
+         */
+        std::optional<SparrowArray> pop();
+
+        /**
+         * Export the stream via the Arrow PyCapsule interface.
+         *
+         * The stream can only be consumed once. After calling this method,
+         * the stream is marked as consumed.
+         *
+         * @return A PyCapsule containing an ArrowArrayStream.
          */
         PyObject* export_to_capsule();
 
         /**
-         * @brief Check if the stream has been consumed.
+         * Check if the SparrowStream has been consumed via export.
          *
-         * @return True if the stream has been exported and consumed.
+         * @return True if the stream has been consumed, False otherwise.
          */
-        [[nodiscard]] bool is_consumed() const;
+        [[nodiscard]] bool is_consumed() const noexcept;
 
     private:
         sparrow::arrow_array_stream_proxy m_stream_proxy;

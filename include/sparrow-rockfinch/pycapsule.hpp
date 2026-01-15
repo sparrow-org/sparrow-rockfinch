@@ -64,27 +64,6 @@ namespace sparrow::rockfinch
     // ========================================================================
 
     /**
-     * @brief Exports a single sparrow array as an ArrowArrayStream PyCapsule.
-     *
-     * Convenience function that wraps a single array in a stream capsule.
-     *
-     * @param arr The sparrow array to export (will be moved from)
-     * @return A PyCapsule containing an ArrowArrayStream, or nullptr on error
-     */
-    SPARROW_ROCKFINCH_API PyObject* export_array_to_stream_capsule(array& arr);
-
-    /**
-     * @brief Exports multiple sparrow arrays as an ArrowArrayStream PyCapsule.
-     *
-     * All arrays must have compatible schemas. The first array's schema is used
-     * as the stream schema.
-     *
-     * @param arrays Vector of sparrow arrays to export (will be moved from)
-     * @return A PyCapsule containing an ArrowArrayStream, or nullptr on error
-     */
-    SPARROW_ROCKFINCH_API PyObject* export_arrays_to_stream_capsule(std::vector<array>& arrays);
-
-    /**
      * @brief Exports an arrow_array_stream_proxy as an ArrowArrayStream PyCapsule.
      *
      * Exports the stream proxy's internal stream to a PyCapsule.
@@ -93,17 +72,6 @@ namespace sparrow::rockfinch
      * @return A PyCapsule containing an ArrowArrayStream, or nullptr on error
      */
     SPARROW_ROCKFINCH_API PyObject* export_stream_proxy_to_capsule(arrow_array_stream_proxy& proxy);
-
-    /**
-     * @brief Imports sparrow arrays from an ArrowArrayStream PyCapsule.
-     *
-     * Consumes all batches from the stream and returns them as a vector of arrays.
-     * After successful import, the capsule's stream is exhausted.
-     *
-     * @param stream_capsule PyCapsule containing an ArrowArrayStream
-     * @return A vector of sparrow arrays, or empty vector on error
-     */
-    SPARROW_ROCKFINCH_API std::vector<array> import_arrays_from_stream_capsule(PyObject* stream_capsule);
 
     /**
      * @brief Imports an arrow_array_stream_proxy from an ArrowArrayStream PyCapsule.
@@ -116,24 +84,4 @@ namespace sparrow::rockfinch
      */
     SPARROW_ROCKFINCH_API arrow_array_stream_proxy import_stream_proxy_from_capsule(PyObject* stream_capsule);
 
-    /**
-     * @brief Creates an arrow_array_stream_proxy from a sparrow array.
-     *
-     * Creates a new stream proxy containing a single array.
-     *
-     * @param arr The sparrow array to add to the proxy (will be moved from)
-     * @return An arrow_array_stream_proxy containing the array
-     */
-    SPARROW_ROCKFINCH_API arrow_array_stream_proxy create_stream_proxy_from_array(array&& arr);
-
-    /**
-     * @brief Imports a single sparrow array from an ArrowArrayStream PyCapsule.
-     *
-     * Returns the first batch from the stream. If the stream contains multiple
-     * batches, only the first is returned and the rest are discarded.
-     *
-     * @param stream_capsule PyCapsule containing an ArrowArrayStream
-     * @return A sparrow array, or an empty array on error
-     */
-    SPARROW_ROCKFINCH_API array import_array_from_stream_capsule(PyObject* stream_capsule);
 }

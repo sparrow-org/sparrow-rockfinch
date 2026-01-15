@@ -260,6 +260,281 @@ class TestSparrowStreamErrorHandling:
             sr.SparrowStream.from_stream([1, 2, 3])
 
 
+class TestSparrowStreamPushPop:
+    """Test SparrowStream push and pop operations."""
+
+    def test_push_method_exists(self):
+        """Verify SparrowStream has push method."""
+        batch = pa.record_batch({"x": [1, 2, 3]})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        assert hasattr(stream, "push"), "SparrowStream should have push method"
+
+    def test_pop_method_exists(self):
+        """Verify SparrowStream has pop method."""
+        batch = pa.record_batch({"x": [1, 2, 3]})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        assert hasattr(stream, "pop"), "SparrowStream should have pop method"
+
+    def test_push_and_pop_single_array(self):
+        """Test pushing and popping a single array."""
+        # Create an empty stream
+        batch = pa.record_batch({"x": []})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Create an array to push
+        arr = sr.SparrowArray.from_arrow(pa.array([1, 2, 3, 4, 5]))
+        
+        # Push the array
+        stream.push(arr)
+        
+        # Pop the array
+        popped = stream.pop()
+        
+        assert popped is not None
+        assert isinstance(popped, sr.SparrowArray)
+        assert popped.size() == 5
+
+    def test_push_multiple_arrays_and_pop_all(self):
+        """Test pushing multiple arrays and popping them all."""
+        # Create an empty stream
+        batch = pa.record_batch({"x": []})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Push 3 arrays
+        for i in range(3):
+            arr = sr.SparrowArray.from_arrow(pa.array([i * 10, i * 10 + 1, i * 10 + 2]))
+            stream.push(arr)
+        
+        # Pop all 3 arrays
+        for i in range(3):
+            popped = stream.pop()
+            assert popped is not None
+            assert popped.size() == 3
+        
+        # Stream should be exhausted
+        empty_pop = stream.pop()
+        assert empty_pop is None
+
+    def test_pop_from_empty_stream_returns_none(self):
+        """Test that popping from an empty stream returns None."""
+        # Create an empty stream
+        batch = pa.record_batch({"x": []})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        popped = stream.pop()
+        assert popped is None
+
+    def test_pop_preserves_fifo_order(self):
+        """Test that pop returns arrays in FIFO order."""
+        # Create an empty stream
+        batch = pa.record_batch({"x": []})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Push arrays with different values
+        arr1 = sr.SparrowArray.from_arrow(pa.array([100, 101, 102]))
+        arr2 = sr.SparrowArray.from_arrow(pa.array([200, 201, 202]))
+        arr3 = sr.SparrowArray.from_arrow(pa.array([300, 301, 302]))
+        
+        stream.push(arr1)
+        stream.push(arr2)
+        stream.push(arr3)
+        
+        # Pop should return in FIFO order
+        first = stream.pop()
+        second = stream.pop()
+        third = stream.pop()
+        
+        assert first is not None
+        assert second is not None
+        assert third is not None
+        assert first.size() == 3
+        assert second.size() == 3
+        assert third.size() == 3
+
+    def test_pop_from_stream_created_from_batches(self):
+        """Test popping from a stream created from PyArrow batches."""
+        # Create a stream with 2 batches
+        batch1 = pa.record_batch({"x": [1, 2, 3]})
+        batch2 = pa.record_batch({"x": [4, 5, 6]})
+        reader = pa.RecordBatchReader.from_batches(batch1.schema, [batch1, batch2])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Pop first batch
+        first = stream.pop()
+        assert first is not None
+        assert first.size() == 3
+        
+        # Pop second batch
+        second = stream.pop()
+        assert second is not None
+        assert second.size() == 3
+        
+        # Stream should be exhausted
+        third = stream.pop()
+        assert third is None
+
+
+class TestSparrowStreamConsumedState:
+    """Test SparrowStream is_consumed behavior."""
+
+    def test_is_consumed_method_exists(self):
+        """Verify SparrowStream has is_consumed method."""
+        batch = pa.record_batch({"x": [1, 2, 3]})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        assert hasattr(stream, "is_consumed"), "SparrowStream should have is_consumed method"
+
+    def test_push_does_not_consume_stream(self):
+        """Verify that push operations don't consume the stream."""
+        batch = pa.record_batch({"x": []})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        assert stream.is_consumed() is False
+        
+        arr = sr.SparrowArray.from_arrow(pa.array([1, 2, 3]))
+        stream.push(arr)
+        
+        assert stream.is_consumed() is False
+
+    def test_pop_does_not_consume_stream(self):
+        """Verify that pop operations don't consume the stream."""
+        batch = pa.record_batch({"x": [1, 2, 3]})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        assert stream.is_consumed() is False
+        
+        stream.pop()
+        
+        assert stream.is_consumed() is False
+
+    def test_push_to_consumed_stream_raises_error(self):
+        """Verify that pushing to a consumed stream raises RuntimeError."""
+        batch = pa.record_batch({"x": [1, 2, 3]})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Consume the stream
+        _ = stream.__arrow_c_stream__()
+        assert stream.is_consumed() is True
+        
+        # Try to push - should raise
+        arr = sr.SparrowArray.from_arrow(pa.array([4, 5, 6]))
+        with pytest.raises(RuntimeError, match="consumed"):
+            stream.push(arr)
+
+    def test_pop_from_consumed_stream_raises_error(self):
+        """Verify that popping from a consumed stream raises RuntimeError."""
+        batch = pa.record_batch({"x": [1, 2, 3]})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Consume the stream
+        _ = stream.__arrow_c_stream__()
+        assert stream.is_consumed() is True
+        
+        # Try to pop - should raise
+        with pytest.raises(RuntimeError, match="consumed"):
+            stream.pop()
+
+    def test_consumed_state_persists(self):
+        """Verify that consumed state persists."""
+        batch = pa.record_batch({"x": [1, 2, 3]})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Consume the stream
+        _ = stream.__arrow_c_stream__()
+        
+        # Check multiple times
+        assert stream.is_consumed() is True
+        assert stream.is_consumed() is True
+        assert stream.is_consumed() is True
+
+
+class TestSparrowStreamPushPopIntegration:
+    """Test integration of push, pop, and stream export."""
+
+    def test_push_then_export(self):
+        """Test pushing arrays then exporting the stream."""
+        # Create an empty stream
+        batch = pa.record_batch({"x": []})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Push some arrays
+        arr1 = sr.SparrowArray.from_arrow(pa.array([1, 2, 3]))
+        arr2 = sr.SparrowArray.from_arrow(pa.array([4, 5, 6]))
+        stream.push(arr1)
+        stream.push(arr2)
+        
+        # Export to PyArrow
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_batches = list(result_reader)
+        
+        # Should have 2 batches
+        assert len(result_batches) == 2
+        assert result_batches[0].num_rows == 3
+        assert result_batches[1].num_rows == 3
+
+    def test_pop_then_push_then_export(self):
+        """Test popping, then pushing, then exporting."""
+        # Create a stream with one batch
+        batch = pa.record_batch({"x": [1, 2, 3]})
+        reader = pa.RecordBatchReader.from_batches(batch.schema, [batch])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Pop the original batch
+        original = stream.pop()
+        assert original is not None
+        
+        # Push new arrays
+        arr1 = sr.SparrowArray.from_arrow(pa.array([10, 20]))
+        arr2 = sr.SparrowArray.from_arrow(pa.array([30, 40]))
+        stream.push(arr1)
+        stream.push(arr2)
+        
+        # Export to PyArrow
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_batches = list(result_reader)
+        
+        # Should have 2 batches (the newly pushed ones)
+        assert len(result_batches) == 2
+        assert result_batches[0].num_rows == 2
+        assert result_batches[1].num_rows == 2
+
+    def test_partial_pop_then_export(self):
+        """Test popping some arrays, then exporting the rest."""
+        # Create a stream with 3 batches
+        batch1 = pa.record_batch({"x": [1, 2]})
+        batch2 = pa.record_batch({"x": [3, 4]})
+        batch3 = pa.record_batch({"x": [5, 6]})
+        reader = pa.RecordBatchReader.from_batches(batch1.schema, [batch1, batch2, batch3])
+        stream = sr.SparrowStream.from_stream(reader)
+        
+        # Pop first batch
+        first = stream.pop()
+        assert first is not None
+        assert first.size() == 2
+        
+        # Export remaining batches
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_batches = list(result_reader)
+        
+        # Should have 2 remaining batches
+        assert len(result_batches) == 2
+
+
 class TestSparrowArrayNoStream:
     """Test that SparrowArray no longer has stream-related methods."""
 

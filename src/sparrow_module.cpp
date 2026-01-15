@@ -209,8 +209,21 @@ namespace sparrow::rockfinch
                 "-------\n"
                 "object\n"
                 "    A PyCapsule containing an ArrowArrayStream.")
+            .def("push", &SparrowStream::push,
+                nb::arg("arr"),
+                "Push a SparrowArray into the stream.")
+            .def("pop", &SparrowStream::pop,    
+                "Pop the next SparrowArray from the stream.\n\n"
+                "Returns\n"
+                "-------\n"
+                "Optional[SparrowArray]\n"
+                "    The next SparrowArray in the stream, or None if the stream is exhausted.")
             .def("is_consumed", &SparrowStream::is_consumed,
-                "Check if the stream has been consumed.");
+                "Check if the SparrowStream has been consumed via export.\n\n"
+                "Returns\n"
+                "-------\n"
+                "bool\n"
+                "    True if the stream has been consumed, False otherwise.");
     }
 
 }  // namespace sparrow::rockfinch
