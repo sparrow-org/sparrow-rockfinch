@@ -22,7 +22,7 @@ name = "sparrow_rockfinch"
 version = "0.1.0"
 
 [dependencies]
-sparrow = ">=2.0.0"
+sparrow = ">=2.1.0"
 sparrow_rockfinch = { path = "." }
 
 [package.build.backend]
@@ -40,12 +40,12 @@ ninja = ">=1.13"
 [package.host-dependencies]
 python = "*"  # Allow all variants
 nanobind = "2.4.*"
-sparrow-devel = ">=2.0.0"
-sparrow = ">=2.0.0"
+sparrow-devel = ">=2.1.0"
+sparrow = ">=2.1.0"
 
 [package.run-dependencies]
 python = "*"
-sparrow = ">=2.0.0"
+sparrow = ">=2.1.0"
 
 [tasks.configure]
 cmd = [
@@ -118,7 +118,7 @@ polars = ">=0.20"
 pyarrow = ">=14.0"
 doctest = ">=2.4"
 nanobind = "2.4.*"
-sparrow-devel = ">=2.0.0"
+sparrow-devel = ">=2.1.0"
 
 [environments]
 default = { features = [], solve-group = "default" }

@@ -152,11 +152,13 @@ set(SPARROW_ROCKFINCH_HEADERS
     ${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch/config/sparrow_rockfinch_version.hpp
     ${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch/pycapsule.hpp
     ${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch/sparrow_array_python_class.hpp
+    ${SPARROW_ROCKFINCH_INCLUDE_DIR}/sparrow-rockfinch/sparrow_stream_python_class.hpp
 )
 
 set(SPARROW_ROCKFINCH_SOURCES
     src/pycapsule.cpp
     src/sparrow_array_python_class.cpp
+    src/sparrow_stream_python_class.cpp
 )
 
 option(SPARROW_ROCKFINCH_BUILD_SHARED "Build sparrow-rockfinch as a shared library" ON)

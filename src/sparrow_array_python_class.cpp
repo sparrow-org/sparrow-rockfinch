@@ -21,6 +21,11 @@ namespace sparrow::rockfinch
         return export_array_to_capsules(arr_copy);
     }
 
+    PyObject* SparrowArray::export_schema_to_capsule() const
+    {
+        return sparrow::rockfinch::export_schema_to_capsule(m_array);
+    }
+
     size_t SparrowArray::size() const
     {
         return m_array.size();
@@ -31,4 +36,4 @@ namespace sparrow::rockfinch
         return m_array;
     }
 
-}  // namespace sparrow::pycapsule
+}  // namespace sparrow::rockfinch

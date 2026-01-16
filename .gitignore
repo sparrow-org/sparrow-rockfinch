@@ -23,6 +23,8 @@ venv/
 htmlcov/
 
 *.conda
-/.build
+.build/
 
 *.locks
+pixi.lock
+/.build
