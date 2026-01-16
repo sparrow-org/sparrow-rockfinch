@@ -2,6 +2,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <optional>
 
 #include <sparrow/array.hpp>
 #include <sparrow/arrow_interface/arrow_array_stream_proxy.hpp>
@@ -32,9 +33,10 @@ namespace sparrow::rockfinch
         /**
          * Construct a SparrowStream from an arrow_array_stream_proxy.
          *
-         * Consumes all arrays from the proxy and stores them internally.
+         * Takes ownership of the provided proxy by moving it into the stream.
+         * The proxy itself manages the underlying arrays.
          *
-         * @param proxy The stream proxy to consume arrays from (will be moved).
+         * @param proxy The stream proxy to move into this SparrowStream.
          */
         explicit SparrowStream(sparrow::arrow_array_stream_proxy&& proxy);
 

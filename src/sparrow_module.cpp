@@ -9,6 +9,7 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/vector.h>
+#include <nanobind/stl/optional.h>
 
 #include <sparrow/arrow_interface/arrow_array_stream_proxy.hpp>
 
@@ -212,7 +213,7 @@ namespace sparrow::rockfinch
             .def("push", &SparrowStream::push,
                 nb::arg("arr"),
                 "Push a SparrowArray into the stream.")
-            .def("pop", &SparrowStream::pop,    
+            .def("pop", &SparrowStream::pop,
                 "Pop the next SparrowArray from the stream.\n\n"
                 "Returns\n"
                 "-------\n"
