@@ -15,7 +15,7 @@ namespace sparrow::rockfinch
 
     void SparrowStream::push(SparrowArray&& arr)
     {
-        if(m_consumed)
+        if (m_consumed)
         {
             throw std::runtime_error("Cannot push to a consumed SparrowStream");
         }
@@ -36,7 +36,7 @@ namespace sparrow::rockfinch
 
     std::optional<SparrowArray> SparrowStream::pop()
     {
-        if(m_consumed)
+        if (m_consumed)
         {
             throw std::runtime_error("Cannot pop from a consumed SparrowStream");
         }

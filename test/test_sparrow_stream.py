@@ -13,8 +13,6 @@ This test validates:
 import pytest
 import pyarrow as pa
 
-# Import helpers from our Python module
-from sparrow_helpers import SparrowArray
 
 # Import the module (try release first, then debug)
 try:
