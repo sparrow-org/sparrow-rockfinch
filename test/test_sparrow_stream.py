@@ -562,3 +562,327 @@ class TestSparrowArrayNoStream:
         assert hasattr(arr, "__arrow_c_schema__"), (
             "SparrowArray should still have __arrow_c_schema__ method"
         )
+
+
+class TestSparrowStreamWithPolars:
+    """Test SparrowStream with polars DataFrame and Series."""
+
+    @pytest.fixture(autouse=True)
+    def check_polars(self):
+        """Check if polars is available, skip tests if not."""
+        try:
+            import polars as pl
+        except ImportError:
+            pytest.skip("polars is not installed")
+
+    def test_create_stream_from_polars_dataframe(self):
+        """Create SparrowStream from a polars DataFrame."""
+        import polars as pl
+        
+        # Create a simple polars DataFrame
+        df = pl.DataFrame({
+            "integers": [1, 2, 3, 4, 5],
+            "floats": [1.1, 2.2, 3.3, 4.4, 5.5],
+            "strings": ["a", "b", "c", "d", "e"]
+        })
+        
+        # Create SparrowStream from the DataFrame
+        stream = sr.SparrowStream.from_stream(df)
+        
+        assert stream is not None
+        assert isinstance(stream, sr.SparrowStream)
+
+    def test_create_stream_from_polars_series(self):
+        """Create SparrowStream from a polars Series."""
+        import polars as pl
+        
+        # Create a simple polars Series
+        series = pl.Series("values", [10, 20, 30, 40, 50])
+        
+        # Create SparrowStream from the Series
+        stream = sr.SparrowStream.from_stream(series)
+        
+        assert stream is not None
+        assert isinstance(stream, sr.SparrowStream)
+
+    def test_polars_dataframe_roundtrip(self):
+        """Test polars DataFrame -> SparrowStream -> PyArrow -> polars round-trip."""
+        import polars as pl
+        
+        # Create original DataFrame
+        original_df = pl.DataFrame({
+            "integers": [1, 2, 3, 4, 5],
+            "floats": [1.1, 2.2, 3.3, 4.4, 5.5],
+            "strings": ["a", "b", "c", "d", "e"]
+        })
+        
+        # Import into SparrowStream
+        stream = sr.SparrowStream.from_stream(original_df)
+        
+        # Export to PyArrow then convert back to polars
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        result_df = pl.from_arrow(result_table)
+        
+        # Verify data integrity
+        assert result_df.shape == original_df.shape
+        assert result_df.columns == original_df.columns
+        assert result_df.equals(original_df)
+
+    def test_polars_series_roundtrip(self):
+        """Test polars Series -> SparrowStream -> PyArrow -> polars round-trip."""
+        import polars as pl
+        
+        # Create original Series and convert to DataFrame for streaming
+        # (Series exports as non-struct schema which doesn't work with RecordBatchReader)
+        original_series = pl.Series("values", [10, 20, 30, 40, 50])
+        df = original_series.to_frame()
+        
+        # Import into SparrowStream
+        stream = sr.SparrowStream.from_stream(df)
+        
+        # Export to PyArrow
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        
+        # Convert back to polars DataFrame
+        result_df = pl.from_arrow(result_table)
+        
+        # Verify data integrity
+        assert result_df.shape == (5, 1)
+        assert result_df.columns == ["values"]
+        assert result_df["values"].equals(original_series)
+
+    def test_polars_dataframe_with_nulls(self):
+        """Test polars DataFrame with null values."""
+        import polars as pl
+        
+        # Create DataFrame with nulls
+        df = pl.DataFrame({
+            "nullable_ints": [1, None, 3, None, 5],
+            "nullable_strings": ["a", None, "c", None, "e"]
+        })
+        
+        # Create SparrowStream
+        stream = sr.SparrowStream.from_stream(df)
+        
+        # Export and verify
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        result_df = pl.from_arrow(result_table)
+        
+        assert result_df.equals(df)
+
+    def test_polars_series_with_nulls(self):
+        """Test polars Series with null values."""
+        import polars as pl
+        
+        # Create Series with nulls and convert to DataFrame for streaming
+        series = pl.Series("nullable", [1, None, 3, None, 5])
+        df = series.to_frame()
+        
+        # Create SparrowStream
+        stream = sr.SparrowStream.from_stream(df)
+        
+        # Export and verify
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        result_df = pl.from_arrow(result_table)
+        
+        assert result_df["nullable"].equals(series)
+
+    def test_polars_dataframe_various_types(self):
+        """Test polars DataFrame with various data types."""
+        import polars as pl
+        
+        # Create DataFrame with different types
+        df = pl.DataFrame({
+            "int8": pl.Series([1, 2, 3], dtype=pl.Int8),
+            "int16": pl.Series([100, 200, 300], dtype=pl.Int16),
+            "int32": pl.Series([1000, 2000, 3000], dtype=pl.Int32),
+            "int64": pl.Series([10000, 20000, 30000], dtype=pl.Int64),
+            "float32": pl.Series([1.5, 2.5, 3.5], dtype=pl.Float32),
+            "float64": pl.Series([1.125, 2.25, 3.375], dtype=pl.Float64),
+            "boolean": pl.Series([True, False, True], dtype=pl.Boolean),
+        })
+        
+        # Create SparrowStream
+        stream = sr.SparrowStream.from_stream(df)
+        
+        # Export and verify
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        result_df = pl.from_arrow(result_table)
+        
+        assert result_df.shape == df.shape
+        assert result_df.columns == df.columns
+
+    def test_polars_series_various_types(self):
+        """Test polars Series with various data types."""
+        import polars as pl
+        
+        # Test integer series
+        int_series = pl.Series("ints", [1, 2, 3, 4, 5], dtype=pl.Int64)
+        stream = sr.SparrowStream.from_stream(int_series.to_frame())
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        assert result_table.num_rows == 5
+        
+        # Test float series
+        float_series = pl.Series("floats", [1.1, 2.2, 3.3], dtype=pl.Float64)
+        stream = sr.SparrowStream.from_stream(float_series.to_frame())
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        assert result_table.num_rows == 3
+        
+        # Test string series
+        string_series = pl.Series("strings", ["hello", "world", "test"])
+        stream = sr.SparrowStream.from_stream(string_series.to_frame())
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        assert result_table.num_rows == 3
+        
+        # Test boolean series
+        bool_series = pl.Series("bools", [True, False, True, False])
+        stream = sr.SparrowStream.from_stream(bool_series.to_frame())
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        assert result_table.num_rows == 4
+
+    def test_polars_empty_dataframe(self):
+        """Test polars empty DataFrame."""
+        import polars as pl
+        
+        # Create empty DataFrame with schema
+        df = pl.DataFrame({
+            "col1": pl.Series([], dtype=pl.Int64),
+            "col2": pl.Series([], dtype=pl.Float64)
+        })
+        
+        # Create SparrowStream
+        stream = sr.SparrowStream.from_stream(df)
+        
+        # Export and verify
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        
+        assert result_table.num_rows == 0
+        assert result_table.num_columns == 2
+
+    def test_polars_empty_series(self):
+        """Test polars empty Series."""
+        import polars as pl
+        
+        # Create empty Series and convert to DataFrame for streaming
+        series = pl.Series("empty", [], dtype=pl.Int64)
+        df = series.to_frame()
+        
+        # Create SparrowStream
+        stream = sr.SparrowStream.from_stream(df)
+        
+        # Export and verify
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        
+        assert result_table.num_rows == 0
+        assert result_table.num_columns == 1
+
+    def test_polars_large_dataframe(self):
+        """Test polars DataFrame with larger dataset."""
+        import polars as pl
+        
+        # Create larger DataFrame
+        n = 10000
+        df = pl.DataFrame({
+            "id": range(n),
+            "value": [i * 2.5 for i in range(n)],
+            "category": [f"cat_{i % 10}" for i in range(n)]
+        })
+        
+        # Create SparrowStream
+        stream = sr.SparrowStream.from_stream(df)
+        
+        # Export and verify
+        result_reader = pa.RecordBatchReader.from_stream(stream)
+        result_table = result_reader.read_all()
+        result_df = pl.from_arrow(result_table)
+        
+        assert result_df.shape == df.shape
+        assert result_df.equals(df)
+
+    def test_polars_dataframe_consumed_state(self):
+        """Test that polars DataFrame stream gets properly consumed."""
+        import polars as pl
+        
+        df = pl.DataFrame({"x": [1, 2, 3]})
+        stream = sr.SparrowStream.from_stream(df)
+        
+        assert stream.is_consumed() is False
+        
+        # Export should consume
+        _ = stream.__arrow_c_stream__()
+        assert stream.is_consumed() is True
+
+    def test_polars_series_consumed_state(self):
+        """Test that polars Series stream gets properly consumed."""
+        import polars as pl
+        
+        series = pl.Series("x", [1, 2, 3])
+        stream = sr.SparrowStream.from_stream(series)
+        
+        assert stream.is_consumed() is False
+        
+        # Export should consume
+        _ = stream.__arrow_c_stream__()
+        assert stream.is_consumed() is True
+
+    def test_pop_from_polars_dataframe_stream(self):
+        """Test popping batches from a polars DataFrame stream."""
+        import polars as pl
+        
+        # Create DataFrame
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        stream = sr.SparrowStream.from_stream(df)
+        
+        # Pop the batch
+        batch = stream.pop()
+        assert batch is not None
+        assert isinstance(batch, sr.SparrowArray)
+        assert batch.size() == 3
+        
+        # Stream should be exhausted
+        assert stream.pop() is None
+
+    def test_pop_from_polars_series_stream(self):
+        """Test popping from a polars Series stream."""
+        import polars as pl
+        
+        # Create Series
+        series = pl.Series([10, 20, 30, 40])
+        stream = sr.SparrowStream.from_stream(series)
+        
+        # Pop the batch
+        batch = stream.pop()
+        assert batch is not None
+        assert batch.size() == 4
+        
+        # Stream should be exhausted
+        assert stream.pop() is None
+
+    def test_create_sparrow_arrays_from_polars_for_push(self):
+        """Test creating SparrowArrays from polars data that can be used with push."""
+        import polars as pl
+        
+        # Create arrays from polars data
+        series1 = pl.Series([10, 20, 30])
+        series2 = pl.Series([40, 50])
+        
+        # Convert to SparrowArrays
+        arr1 = sr.SparrowArray.from_arrow(series1.to_arrow())
+        arr2 = sr.SparrowArray.from_arrow(series2.to_arrow())
+        
+        # Verify arrays were created successfully
+        assert arr1.size() == 3
+        assert arr2.size() == 2
+        assert isinstance(arr1, sr.SparrowArray)
+        assert isinstance(arr2, sr.SparrowArray)
