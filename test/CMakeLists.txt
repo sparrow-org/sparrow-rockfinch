@@ -10,6 +10,7 @@ endif()
 set(SPARROW_ROCKFINCH_TESTS_SOURCES
     main.cpp
     test_pycapsule.cpp
+    test_sparrow_stream.cpp
 )
 
 set(test_target test_sparrow_rockfinch_lib)

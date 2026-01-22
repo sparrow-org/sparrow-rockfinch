@@ -118,6 +118,6 @@ _setup_modules()
 
 # Import from the sparrow_rockfinch module (try release first, then debug)
 try:
-    from sparrow_rockfinch import SparrowArray  # noqa: E402
+    from sparrow_rockfinch import SparrowArray, SparrowStream  # noqa: E402
 except ImportError:
-    from sparrow_rockfinchd import SparrowArray  # noqa: E402
+    from sparrow_rockfinchd import SparrowArray, SparrowStream  # noqa: E402
