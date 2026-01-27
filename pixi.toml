@@ -17,6 +17,10 @@ preview = ["pixi-build"]
 [workspace.build-variants]
 python = ["3.9.*", "3.10.*", "3.11.*", "3.12.*", "3.13.*", "3.14.*"]
 
+[workspace.target.win.build-variants]
+c_compiler = ["vs"]
+cxx_compiler = ["vs"]
+
 [package]
 name = "sparrow_rockfinch"
 version = "0.1.0"
@@ -50,16 +54,16 @@ sparrow = ">=2.1.0"
 [tasks.configure]
 cmd = [
   "cmake",
-  "-GNinja",
   "-S.",
   "-B.build",
-  "-DCMAKE_BUILD_TYPE=Release",
   "-DFETCH_DEPENDENCIES_WITH_CMAKE=OFF",
+  "-DSPARROW_ROCKFINCH_BUILD_TESTS=ON",
+  "-DCMAKE_BUILD_TYPE=Release",
 ]
 description = "Configure CMake build system"
 
 [tasks.build]
-cmd = "cmake --build .build"
+cmd = "cmake --build .build --config Release"
 depends-on = ["configure"]
 description = "Build the project"
 
@@ -67,27 +71,15 @@ description = "Build the project"
 cmd = "rm -rf .build dist"
 description = "Remove build artifacts and conda packages"
 
-[feature.test.tasks.configure]
-cmd = [
-  "cmake",
-  "-GNinja",
-  "-S.",
-  "-B.build",
-  "-DCMAKE_BUILD_TYPE=Release",
-  "-DFETCH_DEPENDENCIES_WITH_CMAKE=OFF",
-  "-DSPARROW_ROCKFINCH_BUILD_TESTS=ON"
-]
-description = "Configure CMake with tests enabled"
-
 [feature.test.tasks.build]
-cmd = "cmake --build .build"
+cmd = "cmake --build .build --config Release"
 depends-on = [
   { task = "configure", environment = "dev" }
 ]
 description = "Build the project with tests"
 
 [feature.test.tasks.test_cpp]
-cmd = "cmake --build .build --target run_tests"
+cmd = "cmake --build .build --config Release --target run_tests"
 depends-on = [
   { task = "configure", environment = "dev" }
 ]
@@ -98,7 +90,7 @@ cmd = "python -c 'import sparrow_rockfinch; import inspect; print([name for name
 description = "List all classes in sparrow_rockfinch module" 
 
 [feature.test.tasks.test_python]
-cmd = "cmake --build .build --target run_sparrow_tests_direct"
+cmd = "cmake --build .build --config Release --target run_sparrow_tests_direct"
 depends-on = [
   { task = "configure", environment = "dev" }
 ]
