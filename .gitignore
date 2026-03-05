@@ -28,3 +28,5 @@ htmlcov/
 *.locks
 pixi.lock
 /.build
+
+.cache/
