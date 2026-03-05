@@ -30,7 +30,7 @@ jobs:
     - name: Get current version
       id: current_version
       run: |
-        $version = uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
+        $version = pixi run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
         echo "version=$version" >> $env:GITHUB_OUTPUT
       shell: pwsh
 
