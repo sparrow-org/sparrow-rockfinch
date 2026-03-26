@@ -6,7 +6,7 @@ namespace sparrow::rockfinch
 {
     constexpr int SPARROW_ROCKFINCH_VERSION_MAJOR = 0;
     constexpr int SPARROW_ROCKFINCH_VERSION_MINOR = 2;
-    constexpr int SPARROW_ROCKFINCH_VERSION_PATCH = 0;
+    constexpr int SPARROW_ROCKFINCH_VERSION_PATCH = 1;
 
     constexpr int SPARROW_ROCKFINCH_BINARY_CURRENT = 1;
     constexpr int SPARROW_ROCKFINCH_BINARY_REVISION = 0;
