@@ -177,7 +177,7 @@ add_library(sparrow-rockfinch-cpp ${SPARROW_ROCKFINCH_LIBRARY_TYPE} ${SPARROW_RO
 target_link_libraries(sparrow-rockfinch-cpp
     PUBLIC 
         sparrow::sparrow
-        Python::Python)
+        Python::Module)
 
 set_target_properties(sparrow-rockfinch-cpp PROPERTIES
     POSITION_INDEPENDENT_CODE ON)
