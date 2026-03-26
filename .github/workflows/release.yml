@@ -29,6 +29,12 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         lfs: true
 
+    - name: Setup pixi
+      uses: prefix-dev/setup-pixi@v0.9.4
+      with:
+        pixi-version: latest
+        cache: false
+
     - name: Get current version
       id: current_version
       run: |
@@ -88,12 +94,6 @@ jobs:
         Set-Content $file -Value $content -NoNewline
         echo "Updated $file to version $newVersion"
       shell: pwsh
-
-    - name: Setup pixi
-      uses: prefix-dev/setup-pixi@v0.9.4
-      with:
-        pixi-version: latest
-        cache: false
 
     - name: Build project
       run: pixi build
