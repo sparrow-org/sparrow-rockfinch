@@ -73,6 +73,22 @@ jobs:
         echo "Updated version to $newVersion"
       shell: pwsh
 
+    - name: Update version in sparrow_rockfinch_version.hpp
+      run: |
+        $newVersion = "${{ steps.new_version.outputs.version }}"
+        $parts = $newVersion.Split('.')
+        $major = $parts[0]
+        $minor = $parts[1]
+        $patch = $parts[2]
+        $file = "include/sparrow-rockfinch/config/sparrow_rockfinch_version.hpp"
+        $content = Get-Content $file -Raw
+        $content = $content -replace '(?m)^(\s*constexpr int SPARROW_ROCKFINCH_VERSION_MAJOR = )\d+(;)', "`${1}$major`$2"
+        $content = $content -replace '(?m)^(\s*constexpr int SPARROW_ROCKFINCH_VERSION_MINOR = )\d+(;)', "`${1}$minor`$2"
+        $content = $content -replace '(?m)^(\s*constexpr int SPARROW_ROCKFINCH_VERSION_PATCH = )\d+(;)', "`${1}$patch`$2"
+        Set-Content $file -Value $content -NoNewline
+        echo "Updated $file to version $newVersion"
+      shell: pwsh
+
     - name: Setup pixi
       uses: prefix-dev/setup-pixi@v0.9.4
       with:
@@ -95,7 +111,7 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add pyproject.toml
+        git add pyproject.toml include/sparrow-rockfinch/config/sparrow_rockfinch_version.hpp
         git commit -m "Bump version to ${{ steps.new_version.outputs.version }}"
 
     - name: Create and push tag
