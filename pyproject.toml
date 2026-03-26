@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "sparrow-rockfinch"
-version = "0.1.0"
+version = "0.2.0"
 description = "High-performance Arrow array library for Python with zero-copy data exchange"
 readme = "README.md"
 license = "Apache-2.0"
