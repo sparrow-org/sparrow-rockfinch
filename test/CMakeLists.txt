@@ -22,6 +22,7 @@ target_link_libraries(${test_target}
     sparrow-rockfinch-cpp
     sparrow::sparrow
     doctest::doctest
+    Python::Python
 )
 
 if(MSVC)
