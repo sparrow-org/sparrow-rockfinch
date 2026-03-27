@@ -84,8 +84,10 @@ jobs:
         $newVersion = "${{ steps.new_version.outputs.version }}"
         $file = "pixi.toml"
         $content = Get-Content $file -Raw
-        # Update version under [workspace] and [package] sections
-        $content = $content -replace '(?m)^(version = ")[^"]*(")' , "`${1}$newVersion`$2"
+        # Update version under [workspace] section only
+        $content = $content -replace '(?ms)(^\[workspace\][^\[]*?^version = ")[^"]*(")', "`${1}$newVersion`$2"
+        # Update version under [package] section only
+        $content = $content -replace '(?ms)(^\[package\][^\[]*?^version = ")[^"]*(")', "`${1}$newVersion`$2"
         Set-Content $file -Value $content -NoNewline
         echo "Updated $file to version $newVersion"
       shell: pwsh
