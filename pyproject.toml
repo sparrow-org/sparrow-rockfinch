@@ -74,6 +74,7 @@ cmake.build-type = "Release"
 [tool.scikit-build.cmake.define]
 SPARROW_ROCKFINCH_BUILD_TESTS = "OFF"
 SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE = "ON"
+SPARROW_ROCKFINCH_BUILD_SHARED = "ON"
 FETCH_DEPENDENCIES_WITH_CMAKE = "ON"
 
 [tool.pytest.ini_options]
