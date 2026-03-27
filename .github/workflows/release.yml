@@ -79,6 +79,19 @@ jobs:
         echo "Updated version to $newVersion"
       shell: pwsh
 
+    - name: Update version in pixi.toml
+      run: |
+        $newVersion = "${{ steps.new_version.outputs.version }}"
+        $file = "pixi.toml"
+        $content = Get-Content $file -Raw
+        # Update version under [workspace] section only
+        $content = $content -replace '(?ms)(^\[workspace\][^\[]*?^version = ")[^"]*(")', "`${1}$newVersion`$2"
+        # Update version under [package] section only
+        $content = $content -replace '(?ms)(^\[package\][^\[]*?^version = ")[^"]*(")', "`${1}$newVersion`$2"
+        Set-Content $file -Value $content -NoNewline
+        echo "Updated $file to version $newVersion"
+      shell: pwsh
+
     - name: Update version in sparrow_rockfinch_version.hpp
       run: |
         $newVersion = "${{ steps.new_version.outputs.version }}"
@@ -111,7 +124,7 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add pyproject.toml include/sparrow-rockfinch/config/sparrow_rockfinch_version.hpp
+        git add pyproject.toml pixi.toml include/sparrow-rockfinch/config/sparrow_rockfinch_version.hpp
         git commit -m "Bump version to ${{ steps.new_version.outputs.version }}"
 
     - name: Create and push tag
