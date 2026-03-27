@@ -23,7 +23,7 @@ cxx_compiler = ["vs"]
 
 [package]
 name = "sparrow_rockfinch"
-version = "0.1.0"
+version = "0.2.2"
 
 [dependencies]
 sparrow = ">=2.1.0"
