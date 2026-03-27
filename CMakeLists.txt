@@ -34,6 +34,7 @@ list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 message(DEBUG "CMake module path: ${CMAKE_MODULE_PATH}")
 
 include(external_dependencies)
+include(GNUInstallDirs)
 
 set(SPARROW_ROCKFINCH_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(SPARROW_ROCKFINCH_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -255,6 +256,17 @@ option(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE "Build the sparrow-rockfinch Python
 message(STATUS "🔧 Build Python module: ${SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE}")
 
 if(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE)
+    set(SPARROW_ROCKFINCH_PYTHON_MODULE_DESTINATION "${Python_SITEARCH}")
+    set(SPARROW_ROCKFINCH_PYTHON_RUNTIME_DESTINATION "${Python_SITEARCH}")
+
+    if(APPLE)
+        set(SPARROW_ROCKFINCH_MODULE_INSTALL_RPATH "@loader_path")
+    elseif(UNIX)
+        set(SPARROW_ROCKFINCH_MODULE_INSTALL_RPATH "$ORIGIN")
+    else()
+        set(SPARROW_ROCKFINCH_MODULE_INSTALL_RPATH "")
+    endif()
+
     nanobind_add_module(sparrow_rockfinch src/sparrow_module.cpp)
     target_link_libraries(sparrow_rockfinch PRIVATE sparrow-rockfinch-cpp sparrow::sparrow)
     target_compile_features(sparrow_rockfinch PRIVATE cxx_std_20)
@@ -268,15 +280,15 @@ if(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE)
         BUILD_RPATH "$<TARGET_FILE_DIR:sparrow-rockfinch-cpp>"
         BUILD_RPATH_USE_ORIGIN ON
         MACOSX_RPATH ON
-        INSTALL_RPATH "@loader_path"
+        INSTALL_RPATH "${SPARROW_ROCKFINCH_MODULE_INSTALL_RPATH}"
     )
 
     install( 
         TARGETS sparrow_rockfinch
         EXPORT sparrow_rockfinchTargets
-        LIBRARY DESTINATION ${Python_SITEARCH}
+        LIBRARY DESTINATION ${SPARROW_ROCKFINCH_PYTHON_MODULE_DESTINATION}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${BINDIR}
+        RUNTIME DESTINATION ${SPARROW_ROCKFINCH_PYTHON_RUNTIME_DESTINATION}
     )
 endif()
 
@@ -288,14 +300,25 @@ endif()
 
 # Installation
 # ============
-include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 # Install target
 set(SPARROW_ROCKFINCH_EXPORTED_TARGETS sparrow-rockfinch-cpp)
 
+set(SPARROW_ROCKFINCH_LIBRARY_DESTINATION ${CMAKE_INSTALL_LIBDIR})
+set(SPARROW_ROCKFINCH_RUNTIME_DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+if(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE AND SPARROW_ROCKFINCH_BUILD_SHARED)
+    set(SPARROW_ROCKFINCH_LIBRARY_DESTINATION "${Python_SITEARCH}")
+    set(SPARROW_ROCKFINCH_RUNTIME_DESTINATION "${Python_SITEARCH}")
+endif()
+
 install(TARGETS ${SPARROW_ROCKFINCH_EXPORTED_TARGETS}
-    EXPORT ${PROJECT_NAME}-targets)
+    EXPORT ${PROJECT_NAME}-targets
+    LIBRARY DESTINATION ${SPARROW_ROCKFINCH_LIBRARY_DESTINATION}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${SPARROW_ROCKFINCH_RUNTIME_DESTINATION}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Makes the project importable from the build directory
 export(EXPORT ${PROJECT_NAME}-targets
