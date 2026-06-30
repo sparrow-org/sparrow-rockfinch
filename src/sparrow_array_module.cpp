@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/pair.h>
@@ -213,6 +214,22 @@ namespace sparrow::rockfinch
             return python_objects_equal(dtype, numpy.attr("dtype")(spec));
         }
 
+        template <typename T>
+        const char* numpy_dtype_spec()
+        {
+            if constexpr (std::same_as<T, std::int8_t>) return "int8";
+            else if constexpr (std::same_as<T, std::uint8_t>) return "uint8";
+            else if constexpr (std::same_as<T, std::int16_t>) return "int16";
+            else if constexpr (std::same_as<T, std::uint16_t>) return "uint16";
+            else if constexpr (std::same_as<T, std::int32_t>) return "int32";
+            else if constexpr (std::same_as<T, std::uint32_t>) return "uint32";
+            else if constexpr (std::same_as<T, std::int64_t>) return "int64";
+            else if constexpr (std::same_as<T, std::uint64_t>) return "uint64";
+            else if constexpr (std::same_as<T, float>) return "float32";
+            else if constexpr (std::same_as<T, double>) return "float64";
+            else static_assert(!sizeof(T*), "Unsupported NumPy dtype");
+        }
+
         SparrowArray sparrow_array_from_ndarray(const nb::object& array_obj)
         {
             python_buffer_guard buffer_guard(array_obj.ptr(), PyBUF_STRIDED_RO);
@@ -231,23 +248,32 @@ namespace sparrow::rockfinch
                 return SparrowArray(sparrow::array(std::move(primitive)));
             }
 
+            using supported_numeric_types = std::tuple<
+                std::int8_t, std::uint8_t,
+                std::int16_t, std::uint16_t,
+                std::int32_t, std::uint32_t,
+                std::int64_t, std::uint64_t,
+                float, double
+            >;
+
             std::optional<SparrowArray> result;
-            auto try_make = [&]<typename T>(const char* spec) -> bool
+            auto try_make = [&]<typename T>() -> bool
             {
-                if (!numpy_dtype_equals(dtype, spec))
+                if (!numpy_dtype_equals(dtype, numpy_dtype_spec<T>()))
                 {
                     return false;
                 }
-
                 result = sparrow_array_from_typed_ndarray<T>(buffer.buf, input_info.size, array_obj, !buffer.readonly);
                 return true;
             };
 
-            if (try_make.operator()<std::int8_t>("int8") || try_make.operator()<std::uint8_t>("uint8")
-                || try_make.operator()<std::int16_t>("int16") || try_make.operator()<std::uint16_t>("uint16")
-                || try_make.operator()<std::int32_t>("int32") || try_make.operator()<std::uint32_t>("uint32")
-                || try_make.operator()<std::int64_t>("int64") || try_make.operator()<std::uint64_t>("uint64")
-                || try_make.operator()<float>("float32") || try_make.operator()<double>("float64"))
+            if (std::apply(
+                    [&](auto... types)
+                    {
+                        return (try_make.template operator()<decltype(types)>() || ...);
+                    },
+                    supported_numeric_types{}
+                ))
             {
                 return std::move(*result);
             }
@@ -304,22 +330,6 @@ namespace sparrow::rockfinch
             );
         }
 
-        template <typename T>
-        const char* numpy_dtype_spec()
-        {
-            if constexpr (std::same_as<T, std::int8_t>) return "int8";
-            else if constexpr (std::same_as<T, std::uint8_t>) return "uint8";
-            else if constexpr (std::same_as<T, std::int16_t>) return "int16";
-            else if constexpr (std::same_as<T, std::uint16_t>) return "uint16";
-            else if constexpr (std::same_as<T, std::int32_t>) return "int32";
-            else if constexpr (std::same_as<T, std::uint32_t>) return "uint32";
-            else if constexpr (std::same_as<T, std::int64_t>) return "int64";
-            else if constexpr (std::same_as<T, std::uint64_t>) return "uint64";
-            else if constexpr (std::same_as<T, float>) return "float32";
-            else if constexpr (std::same_as<T, double>) return "float64";
-            else static_assert(!sizeof(T*), "Unsupported NumPy dtype");
-        }
-
         nb::object make_python_memory_view(const void* data, Py_ssize_t len, nb::handle owner, bool readonly)
         {
             Py_buffer view;
@@ -361,6 +371,18 @@ namespace sparrow::rockfinch
                 nb::arg("dtype") = numpy_dtype_spec<T>(),
                 nb::arg("count") = size
             );
+        }
+
+        template <typename T>
+        nb::object make_numpy_from_arrow_buffer(
+            const ArrowArray* arrow_array, std::size_t size, nb::handle owner, bool copy
+        )
+        {
+            if (copy)
+            {
+                return make_numpy_copy_from_arrow_values<T>(arrow_array, size, false);
+            }
+            return make_numpy_view_from_arrow_values<T>(arrow_array, size, owner);
         }
 
         sparrow::dynamic_bitset_view<std::uint8_t>
@@ -449,85 +471,25 @@ namespace sparrow::rockfinch
                         !copy
                     );
                 case sparrow::data_type::INT8:
-                    return copy ? make_numpy_copy_from_arrow_values<std::int8_t>(arrow_array, array.size(), false)
-                                : make_numpy_view_from_arrow_values<std::int8_t>(arrow_array, array.size(), owner);
+                    return make_numpy_from_arrow_buffer<std::int8_t>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::UINT8:
-                    return copy ? make_numpy_copy_from_arrow_values<std::uint8_t>(arrow_array, array.size(), false)
-                                : make_numpy_view_from_arrow_values<std::uint8_t>(arrow_array, array.size(), owner);
+                    return make_numpy_from_arrow_buffer<std::uint8_t>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::INT16:
-                    return copy ? make_numpy_copy_from_arrow_values<std::int16_t>(arrow_array, array.size(), false)
-                                : make_numpy_view_from_arrow_values<std::int16_t>(arrow_array, array.size(), owner);
+                    return make_numpy_from_arrow_buffer<std::int16_t>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::UINT16:
-                    return copy ? make_numpy_copy_from_arrow_values<std::uint16_t>(arrow_array, array.size(), false)
-                                : make_numpy_view_from_arrow_values<std::uint16_t>(arrow_array, array.size(), owner);
+                    return make_numpy_from_arrow_buffer<std::uint16_t>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::INT32:
-                    return copy ? make_numpy_copy_from_arrow_values<std::int32_t>(arrow_array, array.size(), false)
-                                : make_numpy_view_from_arrow_values<std::int32_t>(arrow_array, array.size(), owner);
+                    return make_numpy_from_arrow_buffer<std::int32_t>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::UINT32:
-                    return copy ? make_numpy_copy_from_arrow_values<std::uint32_t>(arrow_array, array.size(), false)
-                                : make_numpy_view_from_arrow_values<std::uint32_t>(arrow_array, array.size(), owner);
+                    return make_numpy_from_arrow_buffer<std::uint32_t>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::INT64:
-                    return copy ? make_numpy_copy_from_arrow_values<std::int64_t>(arrow_array, array.size(), false)
-                                : make_numpy_view_from_arrow_values<std::int64_t>(arrow_array, array.size(), owner);
+                    return make_numpy_from_arrow_buffer<std::int64_t>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::UINT64:
-                    return copy ? make_numpy_copy_from_arrow_values<std::uint64_t>(arrow_array, array.size(), false)
-                                : make_numpy_view_from_arrow_values<std::uint64_t>(arrow_array, array.size(), owner);
+                    return make_numpy_from_arrow_buffer<std::uint64_t>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::FLOAT:
-                    if (array.null_count() == 0 && !copy)
-                    {
-                        return make_numpy_view_from_arrow_values<float>(arrow_array, array.size(), owner);
-                    }
-                    return make_numpy_copy<float>(
-                        array.size(),
-                        [&](float* out)
-                        {
-                            const auto* src = static_cast<const float*>(arrow_array->buffers[1]) + arrow_array->offset;
-                            const auto validity = arrow_array->buffers[0] == nullptr
-                                                      ? std::optional<sparrow::dynamic_bitset_view<std::uint8_t>>{}
-                                                      : std::optional<sparrow::dynamic_bitset_view<std::uint8_t>>(
-                                                            make_arrow_bitset_view(
-                                                                arrow_array->buffers[0],
-                                                                array.size(),
-                                                                static_cast<std::size_t>(arrow_array->offset)
-                                                            )
-                                                        );
-                            for (std::size_t i = 0; i < array.size(); ++i)
-                            {
-                                out[i] = !validity.has_value() || validity->test(i)
-                                             ? src[i]
-                                             : std::numeric_limits<float>::quiet_NaN();
-                            }
-                        },
-                        !copy
-                    );
+                    return make_numpy_from_arrow_buffer<float>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::DOUBLE:
-                    if (array.null_count() == 0 && !copy)
-                    {
-                        return make_numpy_view_from_arrow_values<double>(arrow_array, array.size(), owner);
-                    }
-                    return make_numpy_copy<double>(
-                        array.size(),
-                        [&](double* out)
-                        {
-                            const auto* src = static_cast<const double*>(arrow_array->buffers[1]) + arrow_array->offset;
-                            const auto validity = arrow_array->buffers[0] == nullptr
-                                                      ? std::optional<sparrow::dynamic_bitset_view<std::uint8_t>>{}
-                                                      : std::optional<sparrow::dynamic_bitset_view<std::uint8_t>>(
-                                                            make_arrow_bitset_view(
-                                                                arrow_array->buffers[0],
-                                                                array.size(),
-                                                                static_cast<std::size_t>(arrow_array->offset)
-                                                            )
-                                                        );
-                            for (std::size_t i = 0; i < array.size(); ++i)
-                            {
-                                out[i] = !validity.has_value() || validity->test(i)
-                                             ? src[i]
-                                             : std::numeric_limits<double>::quiet_NaN();
-                            }
-                        },
-                        !copy
-                    );
+                    return make_numpy_from_arrow_buffer<double>(arrow_array, array.size(), owner, copy);
                 case sparrow::data_type::HALF_FLOAT:
                     throw nb::type_error("SparrowArray.to_numpy() does not yet support float16 arrays");
                 default:

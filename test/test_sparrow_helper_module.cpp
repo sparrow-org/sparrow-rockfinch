@@ -70,6 +70,40 @@ namespace
         sparrow::string_array string_array(std::move(values));
         return sparrow::rockfinch::SparrowArray(sparrow::array(std::move(string_array)));
     }
+
+    // --- Non-nullable primitive helpers (for to_numpy / NumPy operation tests) ---
+
+    template <typename T>
+    sparrow::rockfinch::SparrowArray make_primitive_array(std::vector<T> values)
+    {
+        sparrow::primitive_array<T> prim_array(std::move(values));
+        return sparrow::rockfinch::SparrowArray(sparrow::array(std::move(prim_array)));
+    }
+
+    sparrow::rockfinch::SparrowArray create_primitive_int32_array()
+    {
+        return make_primitive_array<int32_t>({1, 2, 3, 4, 5});
+    }
+
+    sparrow::rockfinch::SparrowArray create_primitive_int64_array()
+    {
+        return make_primitive_array<int64_t>({10, 20, 30, 40, 50});
+    }
+
+    sparrow::rockfinch::SparrowArray create_primitive_float32_array()
+    {
+        return make_primitive_array<float>({1.5f, 2.5f, 3.5f, 4.5f, 5.5f});
+    }
+
+    sparrow::rockfinch::SparrowArray create_primitive_float64_array()
+    {
+        return make_primitive_array<double>({1.0, 2.0, 3.0, 4.0, 5.0});
+    }
+
+    sparrow::rockfinch::SparrowArray create_primitive_uint32_array()
+    {
+        return make_primitive_array<uint32_t>({5, 6, 7, 8, 9});
+    }
 }
 
 NB_MODULE(TEST_SPARROW_HELPER_MODULE_NAME, m)
@@ -91,4 +125,15 @@ NB_MODULE(TEST_SPARROW_HELPER_MODULE_NAME, m)
 
     m.def("create_string_array", &create_string_array,
         "Create a non-primitive string SparrowArray.");
+
+    m.def("create_primitive_int32_array", &create_primitive_int32_array,
+        "Create a non-nullable int32 SparrowArray [1, 2, 3, 4, 5].");
+    m.def("create_primitive_int64_array", &create_primitive_int64_array,
+        "Create a non-nullable int64 SparrowArray [10, 20, 30, 40, 50].");
+    m.def("create_primitive_float32_array", &create_primitive_float32_array,
+        "Create a non-nullable float32 SparrowArray [1.5, 2.5, 3.5, 4.5, 5.5].");
+    m.def("create_primitive_float64_array", &create_primitive_float64_array,
+        "Create a non-nullable float64 SparrowArray [1.0, 2.0, 3.0, 4.0, 5.0].");
+    m.def("create_primitive_uint32_array", &create_primitive_uint32_array,
+        "Create a non-nullable uint32 SparrowArray [5, 6, 7, 8, 9].");
 }

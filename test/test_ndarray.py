@@ -86,14 +86,14 @@ def test_from_ndarray_readonly_source_exports_readonly_view():
 
 
 def test_to_numpy_copy_true_returns_independent_array():
-    sparrow_array = SparrowArray.from_ndarray(np.array([1, 2, 3], dtype=np.int32))
+    sparrow_array = test_sparrow_helper.create_primitive_int32_array()
 
     copied = sparrow_array.to_numpy(copy=True)
     copied[0] = 77
 
     roundtrip = np.asarray(sparrow_array)
-    assert copied.tolist() == [77, 2, 3]
-    assert roundtrip.tolist() == [1, 2, 3]
+    assert copied.tolist() == [77, 2, 3, 4, 5]
+    assert roundtrip.tolist() == [1, 2, 3, 4, 5]
 
 
 # =============================================================================
@@ -294,7 +294,7 @@ def test_from_arrow_numeric_export_is_readonly():
 
 
 def test_array_protocol_rejects_dtype_coercion():
-    sparrow_array = SparrowArray.from_ndarray(np.array([1, 2, 3], dtype=np.int32))
+    sparrow_array = test_sparrow_helper.create_primitive_int32_array()
 
     with pytest.raises(TypeError, match="does not support dtype conversion"):
         sparrow_array.__array__(dtype=np.dtype(np.float64))
@@ -342,18 +342,18 @@ def test_numpy_in_place_multiplication_on_view():
 
 
 @pytest.mark.parametrize(
-    ("dtype", "values", "expected_sum"),
+    ("helper_fn", "values", "expected_sum"),
     [
-        (np.int32, [1, 2, 3, 4], 10),
-        (np.int64, [10, 20, 30, 40], 100),
-        (np.float32, [1.5, 2.5, 3.5, 4.5], 12.0),
-        (np.float64, [9.5, 8.5, 7.5, 6.5], 32.0),
-        (np.uint32, [5, 6, 7, 8], 26),
+        (test_sparrow_helper.create_primitive_int32_array, [1, 2, 3, 4, 5], 15),
+        (test_sparrow_helper.create_primitive_int64_array, [10, 20, 30, 40, 50], 150),
+        (test_sparrow_helper.create_primitive_float32_array, [1.5, 2.5, 3.5, 4.5, 5.5], 17.5),
+        (test_sparrow_helper.create_primitive_float64_array, [1.0, 2.0, 3.0, 4.0, 5.0], 15.0),
+        (test_sparrow_helper.create_primitive_uint32_array, [5, 6, 7, 8, 9], 35),
     ],
 )
-def test_numpy_reductions_on_exported_array(dtype, values, expected_sum):
+def test_numpy_reductions_on_exported_array(helper_fn, values, expected_sum):
     """Reductions (sum, min, max) work on exported numpy arrays."""
-    sparrow_array = SparrowArray.from_ndarray(np.array(values, dtype=dtype))
+    sparrow_array = helper_fn()
     exported = sparrow_array.to_numpy()
 
     assert exported.sum() == expected_sum
@@ -363,7 +363,7 @@ def test_numpy_reductions_on_exported_array(dtype, values, expected_sum):
 
 def test_numpy_mean_and_std_on_exported_array():
     """Mean and standard deviation work on exported arrays."""
-    sparrow_array = SparrowArray.from_ndarray(np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64))
+    sparrow_array = test_sparrow_helper.create_primitive_float64_array()
     exported = sparrow_array.to_numpy()
 
     assert exported.mean() == 3.0
@@ -371,71 +371,72 @@ def test_numpy_mean_and_std_on_exported_array():
 
 
 @pytest.mark.parametrize(
-    ("dtype", "values"),
+    ("helper_fn", "values"),
     [
-        (np.int32, [1, 2, 3, 4]),
-        (np.float64, [1.5, 2.5, 3.5, 4.5]),
+        (test_sparrow_helper.create_primitive_int32_array, [1, 2, 3, 4, 5]),
+        (test_sparrow_helper.create_primitive_float64_array, [1.0, 2.0, 3.0, 4.0, 5.0]),
     ],
 )
-def test_numpy_ufunc_on_exported_array(dtype, values):
+def test_numpy_ufunc_on_exported_array(helper_fn, values):
     """NumPy universal functions (sqrt, abs, add) work on exported arrays."""
-    sparrow_array = SparrowArray.from_ndarray(np.array(values, dtype=dtype))
+    sparrow_array = helper_fn()
     exported = sparrow_array.to_numpy()
 
     abs_result = np.abs(exported)
     assert abs_result.tolist() == [abs(v) for v in values]
 
-    if dtype == np.float64:
+    if "float64" in helper_fn.__name__:
         sqrt_result = np.sqrt(exported)
-        assert np.allclose(sqrt_result, np.sqrt(np.array(values, dtype=dtype)))
+        expected = np.sqrt(np.array(values, dtype=np.float64))
+        assert np.allclose(sqrt_result, expected)
 
 
 def test_numpy_slicing_on_exported_array():
     """Slicing the exported numpy array returns correct values."""
-    sparrow_array = SparrowArray.from_ndarray(np.array([10, 20, 30, 40, 50], dtype=np.int32))
+    sparrow_array = test_sparrow_helper.create_primitive_int32_array()
     exported = sparrow_array.to_numpy()
 
-    assert exported[1:4].tolist() == [20, 30, 40]
-    assert exported[::2].tolist() == [10, 30, 50]
-    assert exported[-1] == 50
+    assert exported[1:4].tolist() == [2, 3, 4]
+    assert exported[::2].tolist() == [1, 3, 5]
+    assert exported[-1] == 5
 
 
 def test_numpy_boolean_masking_on_exported_array():
     """Boolean masking works on exported numpy arrays."""
-    sparrow_array = SparrowArray.from_ndarray(np.array([10, 20, 30, 40, 50], dtype=np.int32))
+    sparrow_array = test_sparrow_helper.create_primitive_int32_array()
     exported = sparrow_array.to_numpy()
 
-    mask = exported > 25
-    assert exported[mask].tolist() == [30, 40, 50]
+    mask = exported > 2
+    assert exported[mask].tolist() == [3, 4, 5]
 
 
 def test_numpy_element_wise_comparison():
     """Element-wise comparison returns correct boolean array."""
-    sparrow_array = SparrowArray.from_ndarray(np.array([1, 2, 3, 4], dtype=np.int32))
+    sparrow_array = test_sparrow_helper.create_primitive_int32_array()
     exported = sparrow_array.to_numpy()
 
     result = exported == 3
-    assert result.tolist() == [False, False, True, False]
+    assert result.tolist() == [False, False, True, False, False]
 
 
 def test_numpy_math_operations_on_copied_array_do_not_affect_source():
     """Math operations on a copied array don't mutate the original SparrowArray."""
-    sparrow_array = SparrowArray.from_ndarray(np.array([1, 2, 3], dtype=np.int32))
+    sparrow_array = test_sparrow_helper.create_primitive_int32_array()
     copied = sparrow_array.to_numpy(copy=True)
 
     copied[0] = 99
     copied += 10
 
-    assert copied.tolist() == [109, 12, 13]
-    assert np.asarray(sparrow_array).tolist() == [1, 2, 3]
+    assert copied.tolist() == [109, 12, 13, 14, 15]
+    assert np.asarray(sparrow_array).tolist() == [1, 2, 3, 4, 5]
 
 
 def test_numpy_broadcast_addition():
     """Broadcast addition of a scalar to an exported view works."""
-    sparrow_array = SparrowArray.from_ndarray(np.array([1.0, 2.0, 3.0], dtype=np.float64))
+    sparrow_array = test_sparrow_helper.create_primitive_float64_array()
     exported = sparrow_array.to_numpy()
 
     result = exported + 10.0
 
-    assert result.tolist() == [11.0, 12.0, 13.0]
-    assert np.asarray(sparrow_array).tolist() == [1.0, 2.0, 3.0]
+    assert result.tolist() == [11.0, 12.0, 13.0, 14.0, 15.0]
+    assert np.asarray(sparrow_array).tolist() == [1.0, 2.0, 3.0, 4.0, 5.0]
