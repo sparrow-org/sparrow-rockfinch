@@ -111,19 +111,110 @@ sparrow_array = SparrowArray(arrow_array)
 
 ### Python Side: NumPy Interop
 
+`SparrowArray` supports bidirectional zero-copy exchange with NumPy for all primitive
+numeric dtypes. Bool arrays are handled as a special case (copied due to Sparrow's
+bit-packed internal representation).
+
+#### Supported NumPy dtypes
+
+| Category | Dtypes |
+|----------|--------|
+| Signed integers | `int8`, `int16`, `int32`, `int64` |
+| Unsigned integers | `uint8`, `uint16`, `uint32`, `uint64` |
+| Floating point | `float32`, `float64` |
+| Boolean | `bool` (copied, not zero-copy) |
+
+#### `from_ndarray` — Import a NumPy array into Sparrow
+
 ```python
 import numpy as np
 import sparrow_rockfinch as sp
 
-values = np.array([1, 2, 3, 4], dtype=np.int32)
-sparrow_array = sp.SparrowArray.from_ndarray(values)
+source = np.array([1, 2, 3, 4], dtype=np.int32)
+sparrow_array = sp.SparrowArray.from_ndarray(source)
+
+# The SparrowArray holds a reference to the original ndarray.
+# Mutations to the source are visible through the SparrowArray:
+source[0] = 42
+print(np.asarray(sparrow_array))  # [42, 2, 3, 4]
+```
+
+`from_ndarray` is zero-copy for all numeric dtypes: the Arrow internal buffer points
+directly to the NumPy data. Writable ndarrays produce writable Arrow buffers; read-only
+ndarrays produce read-only Arrow buffers.
+
+**Input requirements:**
+- Must be a **1D** contiguous ndarray (C order, no slicing strides)
+- Multidimensional and non-contiguous arrays raise `ValueError`
+- Unsupported dtypes (complex, object, etc.) raise `TypeError`
+
+#### `to_numpy` — Export a SparrowArray to NumPy
+
+```python
+# Zero-copy view (default) — returns the original ndarray for ndarray-backed arrays
+sparrow_array = sp.SparrowArray.from_ndarray(np.array([1, 2, 3], dtype=np.float64))
+view = sparrow_array.to_numpy()
+assert view is source          # same Python object
+assert np.shares_memory(view, source)
+
+# In-place mutations on the view propagate back to the SparrowArray:
+view[0] = 99
+print(np.asarray(sparrow_array))  # [99., 2., 3.]
+
+# copy=True allocates an independent writable copy:
+copy = sparrow_array.to_numpy(copy=True)
+assert not np.shares_memory(copy, source)
+```
+
+**Zero-copy path:**
+- **ndarray-backed arrays**: returns the **exact same Python object** as the source (`is` identity)
+- **Arrow-imported arrays** (via `from_arrow`): returns a **read-only memoryview** over the Arrow buffer
+
+**Copy path:**
+- `copy=True` always allocates a fresh writable array
+- `bool` arrays are always copied (Sparrow stores them bit-packed)
+- Nullable integer/bool arrays are **rejected** by `to_numpy()`
+
+#### `__array__` protocol — NumPy integration via `np.asarray`
+
+```python
+sparrow_array = sp.SparrowArray.from_ndarray(np.array([1, 2, 3], dtype=np.int32))
+result = np.asarray(sparrow_array)  # delegates to to_numpy(copy=False)
+assert result is source
+```
+
+`SparrowArray` implements the `__array__` protocol so that `np.asarray()`,
+`np.array()`, and other NumPy functions see it as a compatible array-like object.
+Dtype coercion requests are rejected — `np.asarray(sparrow_array, dtype=np.float64)`
+raises `TypeError`.
+
+#### Read‑only vs writable views
+
+```python
+# Read-only source → read-only view
+source = np.array([1, 2, 3], dtype=np.int32)
+source.flags.writeable = False
+sparrow_array = sp.SparrowArray.from_ndarray(source)
 
 view = sparrow_array.to_numpy()
-assert view.dtype == np.int32
+assert not view.flags.writeable
+# view[0] = 99  # ValueError: assignment destination is read-only
 
-# NumPy also sees SparrowArray through the array protocol
-roundtrip = np.asarray(sparrow_array)
+# Arrow-imported arrays export as read-only memoryviews:
+import pyarrow as pa
+sparrow_array = sp.SparrowArray.from_arrow(pa.array([1, 2, 3], type=pa.int32()))
+view = sparrow_array.to_numpy()
+assert not view.flags.writeable
 ```
+
+#### Limitations
+
+- Only **1D contiguous** ndarrays are accepted by `from_ndarray()`
+- Only **primitive types** are exportable via `to_numpy()` (no strings, lists, structs)
+- `bool` is **always copied** because Sparrow stores it bit-packed
+- **Nullable integer / bool** arrays are **rejected** by `to_numpy()`
+- **Nullable float** arrays are exported as copies with `NaN` sentinels for null values
+- `float16` / half-float arrays are not yet supported
 
 ### C++ Side: Importing from Python
 
@@ -149,30 +240,33 @@ The `SparrowArray` class is a Python type implemented in C++ that:
 
 - **Wraps a sparrow array** and exposes it to Python
 - **Implements `__arrow_c_array__`** (ArrowArrayExportable protocol)
-- **Accepts any ArrowArrayExportable** in its constructor (PyArrow, Polars, etc.)
-- **Accepts primitive 1D NumPy ndarrays** via `from_ndarray()`
-- **Exports primitive arrays to NumPy** via `to_numpy()` / `__array__()`
+- **Accepts any ArrowArrayExportable** via `from_arrow()` (PyArrow, Polars, etc.)
+- **Accepts primitive 1D NumPy ndarrays** via `from_ndarray()` (zero-copy)
+- **Exports to NumPy** via `to_numpy()` / `__array__()` (see [NumPy Interop](#python-side-numpy-interop))
 - **Provides a `size()` method** to get the number of elements
 
 ```python
-# Constructor accepts any object with __arrow_c_array__
-sparrow_array = SparrowArray(pyarrow_array)
-sparrow_array = SparrowArray(another_sparrow_array)
-sparrow_array = SparrowArray.from_ndarray(np.array([1, 2, 3], dtype=np.int32))
+import sparrow_rockfinch as sp
+import numpy as np
 
-# Implements ArrowArrayExportable protocol
+# Create from Arrow-compatible objects
+sparrow_array = sp.SparrowArray.from_arrow(pyarrow_array)
+
+# Create from NumPy (zero-copy for numeric dtypes)
+sparrow_array = sp.SparrowArray.from_ndarray(np.array([1, 2, 3], dtype=np.int32))
+
+# Export to NumPy (zero-copy view when possible)
+view = sparrow_array.to_numpy()
+
+# NumPy array protocol integration
+result = np.asarray(sparrow_array)
+
+# Arrow PyCapsule interface
 schema_capsule, array_capsule = sparrow_array.__arrow_c_array__()
 
 # Get array size
 n = sparrow_array.size()
 ```
-
-NumPy support in v0.2 is intentionally limited:
-- Only 1D contiguous ndarrays are accepted by `from_ndarray()`.
-- Supported dtypes are `bool`, signed/unsigned integers, `float32`, and `float64`.
-- Bool export always copies because Sparrow stores bool values as bitmaps.
-- Nullable float export uses `NaN` sentinels.
-- Nullable integer/bool arrays and non-primitive Sparrow layouts are rejected by `to_numpy()`.
 
 ## Testing
 
