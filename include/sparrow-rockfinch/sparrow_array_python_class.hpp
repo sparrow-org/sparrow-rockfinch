@@ -38,6 +38,12 @@ namespace sparrow::rockfinch
          */
         explicit SparrowArray(sparrow::array&& arr);
 
+        SparrowArray(const SparrowArray& other);
+        SparrowArray(SparrowArray&& other) noexcept;
+        SparrowArray& operator=(const SparrowArray& other);
+        SparrowArray& operator=(SparrowArray&& other) noexcept;
+        ~SparrowArray();
+
         /**
          * @brief Export the array via the Arrow PyCapsule interface (__arrow_c_array__).
          *
@@ -60,14 +66,29 @@ namespace sparrow::rockfinch
         [[nodiscard]] size_t size() const;
 
         /**
+         * @brief Get a mutable reference to the underlying sparrow array.
+         *
+         * @return The wrapped sparrow array.
+         */
+        [[nodiscard]] sparrow::array& get_array();
+
+        /**
          * @brief Get a const reference to the underlying sparrow array.
          *
          * @return The wrapped sparrow array.
          */
         [[nodiscard]] const sparrow::array& get_array() const;
 
+        void set_numpy_owner(PyObject* owner, bool writable);
+        [[nodiscard]] PyObject* numpy_owner() const;
+        [[nodiscard]] bool numpy_owner_writable() const;
+
     private:
+        void clear_numpy_owner();
+
         sparrow::array m_array;
+        PyObject* m_numpy_owner = nullptr;
+        bool m_numpy_owner_writable = false;
     };
 
 }  // namespace sparrow::rockfinch

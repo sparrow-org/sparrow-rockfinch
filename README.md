@@ -7,6 +7,7 @@ The Sparrow Rockfinch Interface - A C++ library for exchanging Apache Arrow data
 `sparrow-rockfinch` provides a clean C++ API for:
 - Exporting sparrow arrays to Python as PyCapsules (Arrow C Data Interface)
 - Importing Arrow data from Python PyCapsules into sparrow arrays
+- Importing/exporting primitive 1D NumPy ndarrays
 - Zero-copy data exchange with Python libraries like Polars, PyArrow, and pandas
 - A `SparrowArray` Python class that implements the Arrow PyCapsule Interface
 
@@ -15,6 +16,7 @@ The Sparrow Rockfinch Interface - A C++ library for exchanging Apache Arrow data
 - ✅ **Zero-copy data exchange** between C++ and Python
 - ✅ **Arrow C Data Interface** compliant
 - ✅ **PyCapsule-based** for safe memory management
+- ✅ **NumPy ndarray interop** for primitive 1D arrays
 - ✅ **Compatible with Polars, PyArrow, pandas** and other Arrow-based libraries
 - ✅ **Bidirectional** data flow (C++ ↔ Python)
 - ✅ **Type-safe** with proper ownership semantics
@@ -107,6 +109,22 @@ arrow_array = pa.array([1, 2, None, 4, 5])
 sparrow_array = SparrowArray(arrow_array)
 ```
 
+### Python Side: NumPy Interop
+
+```python
+import numpy as np
+import sparrow_rockfinch as sp
+
+values = np.array([1, 2, 3, 4], dtype=np.int32)
+sparrow_array = sp.SparrowArray.from_ndarray(values)
+
+view = sparrow_array.to_numpy()
+assert view.dtype == np.int32
+
+# NumPy also sees SparrowArray through the array protocol
+roundtrip = np.asarray(sparrow_array)
+```
+
 ### C++ Side: Importing from Python
 
 ```cpp
@@ -132,12 +150,15 @@ The `SparrowArray` class is a Python type implemented in C++ that:
 - **Wraps a sparrow array** and exposes it to Python
 - **Implements `__arrow_c_array__`** (ArrowArrayExportable protocol)
 - **Accepts any ArrowArrayExportable** in its constructor (PyArrow, Polars, etc.)
+- **Accepts primitive 1D NumPy ndarrays** via `from_ndarray()`
+- **Exports primitive arrays to NumPy** via `to_numpy()` / `__array__()`
 - **Provides a `size()` method** to get the number of elements
 
 ```python
 # Constructor accepts any object with __arrow_c_array__
 sparrow_array = SparrowArray(pyarrow_array)
 sparrow_array = SparrowArray(another_sparrow_array)
+sparrow_array = SparrowArray.from_ndarray(np.array([1, 2, 3], dtype=np.int32))
 
 # Implements ArrowArrayExportable protocol
 schema_capsule, array_capsule = sparrow_array.__arrow_c_array__()
@@ -145,6 +166,13 @@ schema_capsule, array_capsule = sparrow_array.__arrow_c_array__()
 # Get array size
 n = sparrow_array.size()
 ```
+
+NumPy support in v0.2 is intentionally limited:
+- Only 1D contiguous ndarrays are accepted by `from_ndarray()`.
+- Supported dtypes are `bool`, signed/unsigned integers, `float32`, and `float64`.
+- Bool export always copies because Sparrow stores bool values as bitmaps.
+- Nullable float export uses `NaN` sentinels.
+- Nullable integer/bool arrays and non-primitive Sparrow layouts are rejected by `to_numpy()`.
 
 ## Testing
 

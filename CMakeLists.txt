@@ -267,7 +267,12 @@ if(SPARROW_ROCKFINCH_BUILD_PYTHON_MODULE)
         set(SPARROW_ROCKFINCH_MODULE_INSTALL_RPATH "")
     endif()
 
-    nanobind_add_module(sparrow_rockfinch src/sparrow_module.cpp)
+    nanobind_add_module(
+        sparrow_rockfinch
+        src/sparrow_module.cpp
+        src/sparrow_array_module.cpp
+        src/sparrow_stream_module.cpp
+    )
     target_link_libraries(sparrow_rockfinch PRIVATE sparrow-rockfinch-cpp sparrow::sparrow)
     target_compile_features(sparrow_rockfinch PRIVATE cxx_std_20)
     # Define the module name macro to match the output filename (includes debug suffix)
@@ -351,4 +356,3 @@ install(EXPORT ${PROJECT_NAME}-targets
     FILE ${PROJECT_NAME}Targets.cmake
     NAMESPACE sparrow::
     DESTINATION ${SPARROW_CMAKECONFIG_INSTALL_DIR})
-
