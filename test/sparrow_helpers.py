@@ -36,10 +36,23 @@ class SparrowArrayType(ArrowArrayExportable, Protocol):
     def size(self) -> int:
         """Get the number of elements in the array."""
         ...
+
+    def to_numpy(self, copy: bool = False):
+        """Export the array as a NumPy ndarray."""
+        ...
+
+    def __array__(self, dtype: Any = None, copy: Any = None):
+        """NumPy array protocol hook."""
+        ...
     
     @classmethod
     def from_arrow(cls, arrow_array: ArrowArrayExportable) -> "SparrowArrayType":
         """Create a SparrowArray from an Arrow-compatible object."""
+        ...
+
+    @classmethod
+    def from_ndarray(cls, array: Any) -> "SparrowArrayType":
+        """Create a SparrowArray from a NumPy ndarray."""
         ...
 
 

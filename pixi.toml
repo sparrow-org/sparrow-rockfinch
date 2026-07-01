@@ -15,7 +15,7 @@ platforms = ["osx-arm64", "linux-64", "osx-64", "win-64"]
 preview = ["pixi-build"]
 
 [workspace.build-variants]
-python = ["3.9.*", "3.10.*", "3.11.*", "3.12.*", "3.13.*", "3.14.*"]
+python = ["3.11.*", "3.12.*", "3.13.*", "3.14.*"]
 
 [workspace.target.win.build-variants]
 c_compiler = ["vs"]
@@ -26,7 +26,7 @@ name = "sparrow_rockfinch"
 version = "0.2.2"
 
 [dependencies]
-sparrow = ">=2.1.0"
+sparrow = ">=2.4.0"
 sparrow_rockfinch = { path = "." }
 
 [package.build.backend]
@@ -43,13 +43,14 @@ ninja = ">=1.13"
 
 [package.host-dependencies]
 python = "*"  # Allow all variants
-nanobind = "2.4.*"
-sparrow-devel = ">=2.1.0"
-sparrow = ">=2.1.0"
+nanobind = "2.13.*"
+sparrow-devel = ">=2.4.0"
+sparrow = ">=2.4.0"
 
 [package.run-dependencies]
 python = "*"
-sparrow = ">=2.1.0"
+sparrow = ">=2.4.0"
+numpy = "*"
 
 [tasks.configure]
 cmd = [
@@ -100,17 +101,31 @@ description = "Run Python tests"
 cmd = "pytest test/test_package_integration.py"
 description = "Run integration tests"
 
+[feature.test.tasks.test_ndarray]
+cmd = """
+  SPARROW_MODULE_PATH=$(find .build/bin/Release -name 'sparrow_rockfinch*.so' -print -quit) \
+  TEST_SPARROW_HELPER_LIB_PATH=$(find .build/bin/Release -name 'test_sparrow_helper*.so' -print -quit) \
+  pytest test/test_ndarray.py -v
+"""
+depends-on = [
+  { task = "build", environment = "dev" }
+]
+description = "Run NumPy ndarray roundtrip and operation tests"
+
 [feature.test.tasks.all_tests]
-depends-on = ["test_cpp", "test_python"]
+depends-on = ["test_cpp", "test_python", "test_ndarray"]
 description = "Run all C++ and Python tests"
 
 [feature.test.dependencies]
 pytest = ">=7.0"
 polars = ">=0.20"
 pyarrow = ">=14.0"
-doctest = ">=2.4"
-nanobind = "2.4.*"
-sparrow-devel = ">=2.1.0"
+doctest = ">=2.5"
+nanobind = "2.13.*"
+sparrow-devel = ">=2.4.0"
+numpy = "*"
+c-compiler = "*"
+cxx-compiler = "*"
 
 [environments]
 default = { features = [], solve-group = "default" }
