@@ -49,7 +49,7 @@ set(SPARROW_BUILD_SHARED ${SPARROW_ROCKFINCH_BUILD_SHARED})
 find_package_or_fetch(
     PACKAGE_NAME sparrow
     GIT_REPOSITORY https://github.com/man-group/sparrow.git
-    TAG 2.4.0
+    TAG 1495776a79884d599204fb2e4ae178c40dc4f0a3
 )
 
 if(NOT TARGET sparrow::sparrow)
