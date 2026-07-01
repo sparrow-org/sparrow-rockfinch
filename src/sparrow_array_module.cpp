@@ -32,15 +32,8 @@
 
 namespace nb = nanobind;
 
-// =============================================================================
-// sparrow::rockfinch::detail  –  non-template function definitions
-// =============================================================================
-
 namespace sparrow::rockfinch::detail
 {
-    // -------------------------------------------------------------------------
-    // python_buffer_guard
-    // -------------------------------------------------------------------------
 
     python_buffer_guard::python_buffer_guard(PyObject* object, int flags)
     {
@@ -63,10 +56,6 @@ namespace sparrow::rockfinch::detail
     {
         return m_view;
     }
-
-    // -------------------------------------------------------------------------
-    // release_numpy_arrow_array
-    // -------------------------------------------------------------------------
 
     void release_numpy_arrow_array(ArrowArray* array)
     {
@@ -95,10 +84,6 @@ namespace sparrow::rockfinch::detail
         array->release = nullptr;
     }
 
-    // -------------------------------------------------------------------------
-    // python_objects_equal
-    // -------------------------------------------------------------------------
-
     bool python_objects_equal(nb::handle lhs, nb::handle rhs)
     {
         const int result = PyObject_RichCompareBool(lhs.ptr(), rhs.ptr(), Py_EQ);
@@ -109,18 +94,10 @@ namespace sparrow::rockfinch::detail
         return result == 1;
     }
 
-    // -------------------------------------------------------------------------
-    // numpy_dtype_to_string
-    // -------------------------------------------------------------------------
-
     std::string numpy_dtype_to_string(const nb::object& dtype)
     {
         return {nb::str(dtype).c_str()};
     }
-
-    // -------------------------------------------------------------------------
-    // validate_numpy_input
-    // -------------------------------------------------------------------------
 
     ndarray_input_info validate_numpy_input(const Py_buffer& buffer)
     {
@@ -140,19 +117,11 @@ namespace sparrow::rockfinch::detail
         return {size};
     }
 
-    // -------------------------------------------------------------------------
-    // numpy_dtype_equals
-    // -------------------------------------------------------------------------
-
     bool numpy_dtype_equals(const nb::object& dtype, const char* spec)
     {
         static nb::module_ numpy = nb::module_::import_("numpy");
         return python_objects_equal(dtype, numpy.attr("dtype")(spec));
     }
-
-    // -------------------------------------------------------------------------
-    // sparrow_array_from_ndarray
-    // -------------------------------------------------------------------------
 
     SparrowArray sparrow_array_from_ndarray(const nb::object& array_obj)
     {
@@ -219,19 +188,11 @@ namespace sparrow::rockfinch::detail
         );
     }
 
-    // -------------------------------------------------------------------------
-    // mark_numpy_array_readonly
-    // -------------------------------------------------------------------------
-
     nb::object mark_numpy_array_readonly(nb::object array)
     {
         array.attr("setflags")(false);
         return array;
     }
-
-    // -------------------------------------------------------------------------
-    // make_python_memory_view
-    // -------------------------------------------------------------------------
 
     nb::object
     make_python_memory_view(const void* data, Py_ssize_t len, nb::handle owner, bool readonly)
@@ -259,19 +220,11 @@ namespace sparrow::rockfinch::detail
         return nb::steal(memory_view);
     }
 
-    // -------------------------------------------------------------------------
-    // make_arrow_bitset_view
-    // -------------------------------------------------------------------------
-
     sparrow::dynamic_bitset_view<std::uint8_t>
     make_arrow_bitset_view(const void* buffer, std::size_t size, std::size_t offset)
     {
         return {const_cast<std::uint8_t*>(static_cast<const std::uint8_t*>(buffer)), size, offset};
     }
-
-    // -------------------------------------------------------------------------
-    // parse_copy_argument
-    // -------------------------------------------------------------------------
 
     bool parse_copy_argument(const nb::object& copy_arg)
     {
@@ -287,10 +240,6 @@ namespace sparrow::rockfinch::detail
 
         return nb::cast<bool>(copy_arg);
     }
-
-    // -------------------------------------------------------------------------
-    // validate_numpy_export_supported
-    // -------------------------------------------------------------------------
 
     void validate_numpy_export_supported(const sparrow::array& array)
     {
@@ -319,10 +268,6 @@ namespace sparrow::rockfinch::detail
                 return;
         }
     }
-
-    // -------------------------------------------------------------------------
-    // sparrow_array_to_numpy
-    // -------------------------------------------------------------------------
 
     nb::object sparrow_array_to_numpy(SparrowArray& self, bool copy)
     {
@@ -387,10 +332,6 @@ namespace sparrow::rockfinch::detail
         }
     }
 
-    // -------------------------------------------------------------------------
-    // sparrow_array_dunder_array
-    // -------------------------------------------------------------------------
-
     nb::object sparrow_array_dunder_array(SparrowArray& self, nb::object dtype, nb::object copy)
     {
         nb::object result = sparrow_array_to_numpy(self, parse_copy_argument(copy));
@@ -409,10 +350,6 @@ namespace sparrow::rockfinch::detail
 
         return result;
     }
-
-    // -------------------------------------------------------------------------
-    // sparrow_array_from_arrow
-    // -------------------------------------------------------------------------
 
     SparrowArray sparrow_array_from_arrow(const nb::object& arrow_array)
     {
@@ -434,19 +371,11 @@ namespace sparrow::rockfinch::detail
         return {capsule_tuple[0].ptr(), capsule_tuple[1].ptr()};
     }
 
-    // -------------------------------------------------------------------------
-    // sparrow_array_to_arrow
-    // -------------------------------------------------------------------------
-
     nb::tuple sparrow_array_to_arrow(const SparrowArray& self, nb::object /*requested_schema*/)
     {
         auto [schema, array] = self.export_to_capsules();
         return nb::make_tuple(nb::steal(schema), nb::steal(array));
     }
-
-    // -------------------------------------------------------------------------
-    // sparrow_array_to_schema
-    // -------------------------------------------------------------------------
 
     nb::object sparrow_array_to_schema(const SparrowArray& self)
     {
@@ -459,10 +388,6 @@ namespace sparrow::rockfinch::detail
     }
 
 }  // namespace sparrow::rockfinch::detail
-
-// =============================================================================
-// sparrow::rockfinch  –  public nanobind registration
-// =============================================================================
 
 namespace sparrow::rockfinch
 {

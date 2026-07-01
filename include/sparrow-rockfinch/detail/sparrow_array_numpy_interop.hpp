@@ -31,17 +31,9 @@
 #include <sparrow/buffer/dynamic_bitset/dynamic_bitset_view.hpp>
 #include <sparrow/types/data_type.hpp>
 
-// =============================================================================
-// sparrow::rockfinch::detail  –  NumPy interop helpers
-// =============================================================================
-
 namespace sparrow::rockfinch::detail
 {
     namespace nb = nanobind;
-
-    // =========================================================================
-    // python_buffer_guard
-    // =========================================================================
 
     /**
      * @brief RAII wrapper for Python buffer-protocol access.
@@ -82,10 +74,6 @@ namespace sparrow::rockfinch::detail
         bool m_valid = false;
     };
 
-    // =========================================================================
-    // numpy_arrow_array_private_data
-    // =========================================================================
-
     /**
      * @brief Private data attached to an ``ArrowArray`` that borrows memory
      *        from a NumPy array.
@@ -105,10 +93,6 @@ namespace sparrow::rockfinch::detail
         bool writable = false;
     };
 
-    // =========================================================================
-    // ndarray_input_info
-    // =========================================================================
-
     /**
      * @brief Result of validating a NumPy ndarray for import.
      */
@@ -117,10 +101,6 @@ namespace sparrow::rockfinch::detail
         /// Number of elements in the (1-D) array.
         std::size_t size;
     };
-
-    // =========================================================================
-    // release_numpy_arrow_array
-    // =========================================================================
 
     /**
      * @brief Arrow release callback for an ``ArrowArray`` backed by NumPy data.
@@ -132,10 +112,6 @@ namespace sparrow::rockfinch::detail
      * @param array  The ``ArrowArray`` whose backing NumPy data should be released.
      */
     void release_numpy_arrow_array(ArrowArray* array);
-
-    // =========================================================================
-    // arrow_format_for<T>
-    // =========================================================================
 
     /**
      * @brief Return the Arrow format string for a primitive C++ type.
@@ -150,10 +126,6 @@ namespace sparrow::rockfinch::detail
             sparrow::detail::get_data_type_from_array<sparrow::primitive_array<T>>::get()
         );
     }
-
-    // =========================================================================
-    // sparrow_array_from_typed_ndarray<T>
-    // =========================================================================
 
     /**
      * @brief Build a ``SparrowArray`` that borrows memory from a typed NumPy buffer.
@@ -223,10 +195,6 @@ namespace sparrow::rockfinch::detail
         }
     }
 
-    // =========================================================================
-    // python_objects_equal
-    // =========================================================================
-
     /**
      * @brief Compare two Python objects for equality (``==``).
      *
@@ -240,10 +208,6 @@ namespace sparrow::rockfinch::detail
      */
     [[nodiscard]] bool python_objects_equal(nb::handle lhs, nb::handle rhs);
 
-    // =========================================================================
-    // numpy_dtype_to_string
-    // =========================================================================
-
     /**
      * @brief Convert a NumPy ``dtype`` object to a C++ string.
      *
@@ -251,10 +215,6 @@ namespace sparrow::rockfinch::detail
      * @return       The string representation (e.g. ``"int32"``).
      */
     [[nodiscard]] std::string numpy_dtype_to_string(const nb::object& dtype);
-
-    // =========================================================================
-    // validate_numpy_input
-    // =========================================================================
 
     /**
      * @brief Validate that a ``Py_buffer`` is suitable for SparrowArray import.
@@ -269,10 +229,6 @@ namespace sparrow::rockfinch::detail
      */
     [[nodiscard]] ndarray_input_info validate_numpy_input(const Py_buffer& buffer);
 
-    // =========================================================================
-    // numpy_dtype_equals
-    // =========================================================================
-
     /**
      * @brief Check whether a NumPy ``dtype`` matches a given dtype-spec string.
      *
@@ -281,10 +237,6 @@ namespace sparrow::rockfinch::detail
      * @return       ``true`` if the dtypes are equal.
      */
     [[nodiscard]] bool numpy_dtype_equals(const nb::object& dtype, const char* spec);
-
-    // =========================================================================
-    // numpy_dtype_spec<T>
-    // =========================================================================
 
     /**
      * @brief Return the NumPy dtype-spec string for a C++ numeric type.
@@ -343,10 +295,6 @@ namespace sparrow::rockfinch::detail
         }
     }
 
-    // =========================================================================
-    // sparrow_array_from_ndarray
-    // =========================================================================
-
     /**
      * @brief Import a 1-D contiguous NumPy ndarray into a ``SparrowArray``.
      *
@@ -363,10 +311,6 @@ namespace sparrow::rockfinch::detail
      */
     [[nodiscard]] SparrowArray sparrow_array_from_ndarray(const nb::object& array_obj);
 
-    // =========================================================================
-    // mark_numpy_array_readonly
-    // =========================================================================
-
     /**
      * @brief Mark a NumPy array as read-only (``arr.setflags(write=False)``).
      *
@@ -374,10 +318,6 @@ namespace sparrow::rockfinch::detail
      * @return       The same array, now read-only.
      */
     [[nodiscard]] nb::object mark_numpy_array_readonly(nb::object array);
-
-    // =========================================================================
-    // make_numpy_copy<T>
-    // =========================================================================
 
     /**
      * @brief Allocate a new NumPy array and fill it via a callback.
@@ -412,10 +352,6 @@ namespace sparrow::rockfinch::detail
         return readonly ? mark_numpy_array_readonly(std::move(array)) : array;
     }
 
-    // =========================================================================
-    // make_numpy_copy_from_arrow_values<T>
-    // =========================================================================
-
     /**
      * @brief Copy the value buffer of an ``ArrowArray`` into a new NumPy array.
      *
@@ -440,10 +376,6 @@ namespace sparrow::rockfinch::detail
         );
     }
 
-    // =========================================================================
-    // make_python_memory_view
-    // =========================================================================
-
     /**
      * @brief Create a ``memoryview`` object from a raw data pointer.
      *
@@ -460,10 +392,6 @@ namespace sparrow::rockfinch::detail
      */
     [[nodiscard]] nb::object
     make_python_memory_view(const void* data, Py_ssize_t len, nb::handle owner, bool readonly);
-
-    // =========================================================================
-    // make_numpy_view_from_arrow_values<T>
-    // =========================================================================
 
     /**
      * @brief Create a zero-copy NumPy view over the value buffer of an
@@ -497,10 +425,6 @@ namespace sparrow::rockfinch::detail
         );
     }
 
-    // =========================================================================
-    // make_numpy_from_arrow_buffer<T>
-    // =========================================================================
-
     /**
      * @brief Export an ``ArrowArray`` value buffer as a NumPy array.
      *
@@ -525,10 +449,6 @@ namespace sparrow::rockfinch::detail
         return make_numpy_view_from_arrow_values<T>(arrow_array, size, owner);
     }
 
-    // =========================================================================
-    // make_arrow_bitset_view
-    // =========================================================================
-
     /**
      * @brief Wrap an Arrow validity bitmap buffer as a ``dynamic_bitset_view``.
      *
@@ -540,10 +460,6 @@ namespace sparrow::rockfinch::detail
     [[nodiscard]] sparrow::dynamic_bitset_view<std::uint8_t>
     make_arrow_bitset_view(const void* buffer, std::size_t size, std::size_t offset);
 
-    // =========================================================================
-    // parse_copy_argument
-    // =========================================================================
-
     /**
      * @brief Interpret the ``copy`` argument of ``__array__``.
      *
@@ -553,10 +469,6 @@ namespace sparrow::rockfinch::detail
      * @throws nb::type_error  If *copy_arg* is not a bool or ``None``.
      */
     [[nodiscard]] bool parse_copy_argument(const nb::object& copy_arg);
-
-    // =========================================================================
-    // validate_numpy_export_supported
-    // =========================================================================
 
     /**
      * @brief Verify that a sparrow array can be safely exported to NumPy.
@@ -570,10 +482,6 @@ namespace sparrow::rockfinch::detail
      * @throws nb::type_error  If the array is a nullable bool or integer type.
      */
     void validate_numpy_export_supported(const sparrow::array& array);
-
-    // =========================================================================
-    // sparrow_array_to_numpy
-    // =========================================================================
 
     /**
      * @brief Convert a ``SparrowArray`` to a ``numpy.ndarray``.
@@ -589,10 +497,6 @@ namespace sparrow::rockfinch::detail
      * @throws nb::type_error  If the array type cannot be exported.
      */
     [[nodiscard]] nb::object sparrow_array_to_numpy(SparrowArray& self, bool copy);
-
-    // =========================================================================
-    // sparrow_array_dunder_array
-    // =========================================================================
 
     /**
      * @brief Implementation of ``SparrowArray.__array__`` (NumPy array protocol).
@@ -610,10 +514,6 @@ namespace sparrow::rockfinch::detail
     [[nodiscard]] nb::object
     sparrow_array_dunder_array(SparrowArray& self, nb::object dtype, nb::object copy);
 
-    // =========================================================================
-    // sparrow_array_from_arrow
-    // =========================================================================
-
     /**
      * @brief Create a ``SparrowArray`` from any object implementing
      *        ``__arrow_c_array__``.
@@ -626,10 +526,6 @@ namespace sparrow::rockfinch::detail
      */
     [[nodiscard]] SparrowArray sparrow_array_from_arrow(const nb::object& arrow_array);
 
-    // =========================================================================
-    // sparrow_array_to_arrow
-    // =========================================================================
-
     /**
      * @brief Implementation of ``SparrowArray.__arrow_c_array__``.
      *
@@ -641,10 +537,6 @@ namespace sparrow::rockfinch::detail
      */
     [[nodiscard]] nb::tuple
     sparrow_array_to_arrow(const SparrowArray& self, nb::object requested_schema);
-
-    // =========================================================================
-    // sparrow_array_to_schema
-    // =========================================================================
 
     /**
      * @brief Implementation of ``SparrowArray.__arrow_c_schema__``.
