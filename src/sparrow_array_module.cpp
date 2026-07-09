@@ -50,6 +50,7 @@ namespace sparrow::rockfinch::detail
         {
             PyBuffer_Release(&m_view);
         }
+        m_valid = false;
     }
 
     const Py_buffer& python_buffer_guard::view() const

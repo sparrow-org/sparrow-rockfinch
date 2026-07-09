@@ -58,6 +58,8 @@ namespace sparrow::rockfinch::detail
 
         python_buffer_guard(const python_buffer_guard&) = delete;
         python_buffer_guard& operator=(const python_buffer_guard&) = delete;
+        python_buffer_guard(python_buffer_guard&&) = delete;
+        python_buffer_guard& operator=(python_buffer_guard&&) = delete;
 
         /// Release the held ``Py_buffer``.
         ~python_buffer_guard();
