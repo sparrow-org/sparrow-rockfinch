@@ -85,7 +85,7 @@ namespace sparrow::rockfinch::detail
      */
     struct numpy_arrow_array_private_data
     {
-        /// The Python object that owns the backing memory (borrowed reference).
+        /// The Python object that owns the backing memory (owned reference).
         PyObject* owner = nullptr;
 
         /// Array of buffer pointers passed to the ``ArrowArray``.

@@ -105,6 +105,14 @@ namespace sparrow::rockfinch
         [[nodiscard]] bool numpy_owner_writable() const;
 
     private:
+        /**
+         * @brief Release the owned NumPy reference, if any, and reset metadata.
+         *
+         * ``m_numpy_owner`` stores an owned reference. Copy operations acquire a
+         * fresh reference, while move operations transfer the pointer directly
+         * and leave the source null, so there is no matching ``INCREF`` in the
+         * move path.
+         */
         void clear_numpy_owner();
 
         sparrow::array m_array;
