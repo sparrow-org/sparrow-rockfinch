@@ -48,8 +48,8 @@ endfunction()
 set(SPARROW_BUILD_SHARED ${SPARROW_ROCKFINCH_BUILD_SHARED})
 find_package_or_fetch(
     PACKAGE_NAME sparrow
-    GIT_REPOSITORY https://github.com/man-group/sparrow.git
-    TAG 1.3.0
+    GIT_REPOSITORY https://github.com/sparrow-org/sparrow.git
+    TAG 2.5.0
 )
 
 if(NOT TARGET sparrow::sparrow)
@@ -60,7 +60,7 @@ if(SPARROW_ROCKFINCH_BUILD_TESTS)
     find_package_or_fetch(
         PACKAGE_NAME doctest
         GIT_REPOSITORY https://github.com/doctest/doctest.git
-        TAG v2.4.12
+        TAG v2.5.2
     )
 endif()
 
@@ -84,7 +84,7 @@ endif()
 find_package_or_fetch(
     PACKAGE_NAME nanobind
     GIT_REPOSITORY https://github.com/wjakob/nanobind.git
-    TAG v2.9.2
+    TAG v2.13.0
 )
 
 if(TARGET nanobind)
